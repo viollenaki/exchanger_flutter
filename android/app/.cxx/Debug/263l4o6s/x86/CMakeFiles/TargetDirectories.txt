@@ -1,0 +1,2 @@
+D:/RealProject/currencies/android/app/.cxx/Debug/263l4o6s/x86/CMakeFiles/edit_cache.dir
+D:/RealProject/currencies/android/app/.cxx/Debug/263l4o6s/x86/CMakeFiles/rebuild_cache.dir
