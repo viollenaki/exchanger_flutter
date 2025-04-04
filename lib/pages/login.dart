@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import '../main.dart';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'dart:convert'; // Для обработки JSON
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -11,184 +10,359 @@ class Login extends StatefulWidget {
 }
 
 class _LoginState extends State<Login> {
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  bool _isLoading = false;
+  final PageController _pageController = PageController(); // Контроллер для переключения страниц
+  int _tabIndex = 0; // Индекс текущей вкладки (Login или Register)
 
-  Future<void> _checkUsersAndLogin(BuildContext context) async {
-    setState(() {
-      _isLoading = true;
-    });
-    await _login(context);
-
-    setState(() {
-      _isLoading = false;
-    });
+  // Виджет для отображения вкладок (Login и Register)
+  Widget _buildMainTabs() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.blue[100],
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        children: [
+          _tabButton('Login', 0), // Кнопка для вкладки Login
+          const SizedBox(width: 4),
+          _tabButton('Register', 1), // Кнопка для вкладки Register
+        ],
+      ),
+    );
   }
 
-  Future<void> _login(BuildContext context) async {
-    final response = await http.post(
-      Uri.parse('https://dair12.pythonanywhere.com/get_password_by_username/'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'user': _usernameController.text}),
-    );
+  // Виджет для кнопки вкладки
+  Widget _tabButton(String title, int index) {
+    final bool selected = _tabIndex == index; // Проверка, выбрана ли вкладка
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      if (data['password'] == _passwordController.text) {
-        await http.post(
-          Uri.parse('https://dair12.pythonanywhere.com/login_user/'),
-          headers: {'Content-Type': 'application/json'},
-          body: json.encode({'username': _usernameController.text}),
-        );
-        currentUser = _usernameController.text;
-        balance = data['balance'];
-        await fetchGlobalCurrencies();
-        fetchUsers();
-        await fetchGlobalTransactions(currentUser!);
-        currencyHoldings = await fetchUserInventory(currentUser!);
-        Navigator.pushReplacementNamed(context, '/home');
-      } else {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() => _tabIndex = index); // Обновление текущего индекса вкладки
+          _pageController.animateToPage(
+            index,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOut,
+          );
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: selected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    )
+                  ]
+                : [],
+          ),
+          child: Center(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: selected ? Colors.blueAccent : Colors.blue[900],
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Виджет для текстового поля ввода
+  Widget _buildTextInput(IconData icon, String hint, {bool obscure = false, TextEditingController? controller}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: TextField(
+        controller: controller, // Контроллер для получения текста
+        obscureText: obscure, // Скрытие текста (например, для пароля)
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon, color: Colors.blue), // Иконка перед текстом
+          hintText: hint, // Подсказка
+          filled: true,
+          fillColor: Colors.grey[200],
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Форма для входа
+  Widget _buildLoginForm() {
+    final TextEditingController usernameController = TextEditingController();
+    final TextEditingController passwordController = TextEditingController();
+
+    // Функция для входа пользователя
+    Future<void> _loginUser() async {
+      final String username = usernameController.text.trim();
+      final String password = passwordController.text.trim();
+
+      // Проверка на заполнение всех полей
+      if (username.isEmpty || password.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid username or password')),
+          const SnackBar(content: Text('Please fill in all fields')),
+        );
+        return;
+      }
+
+      final url = Uri.parse("https://dair12.pythonanywhere.com/login_user/");
+      try {
+        final response = await http.post(
+          url,
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode({
+            "identifier": username,
+            "password": password,
+          }),
+        );
+
+        // Вывод в консоль статуса и тела ответа
+        print('Status code: ${response.statusCode}');
+        print('Body: ${response.body}');
+
+        if (response.statusCode == 200) {
+          final responseData = jsonDecode(response.body);
+
+          // Проверка успешного входа
+          if (responseData.containsKey('message')) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(responseData['message'])), // Сообщение из API
+            );
+
+            // Сохранение данных пользователя (если нужно)
+            final int userId = responseData['id'];
+            final String userEmail = responseData['email'];
+            final double userBalance = responseData['balance'];
+
+            // Переход на главную страницу
+            Navigator.pushReplacementNamed(context, '/home', arguments: {
+              'id': userId,
+              'email': userEmail,
+              'balance': userBalance,
+            });
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Invalid login credentials')),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Server error: ${response.statusCode}')),
+          );
+        }
+      } catch (e) {
+        // Вывод ошибки в консоль
+        print('Error: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to connect to the server: $e')),
         );
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error logging in')),
-      );
     }
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          _buildTextInput(Icons.person, "Username", controller: usernameController), // Поле ввода имени пользователя
+          _buildTextInput(Icons.lock, "Password", obscure: true, controller: passwordController), // Поле ввода пароля
+          const SizedBox(height: 10),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blueAccent,
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            onPressed: _loginUser, // Вызов функции входа
+            child: const Text("Login", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
-  void _showRegistrationDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        final TextEditingController _newUserController = TextEditingController();
-        final TextEditingController _newPasswordController = TextEditingController();
+  // Форма для регистрации
+  Widget _buildRegisterForm() {
+    final TextEditingController usernameController = TextEditingController();
+    final TextEditingController emailController = TextEditingController();
+    final TextEditingController passwordController = TextEditingController();
+    final TextEditingController confirmPasswordController = TextEditingController();
 
-        return AlertDialog(
-          title: const Text('Register New User'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _newUserController,
-                decoration: const InputDecoration(hintText: 'Username'),
-              ),
-              TextField(
-                controller: _newPasswordController,
-                obscureText: true,
-                decoration: const InputDecoration(hintText: 'Password'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                final newUser = _newUserController.text;
-                final newPassword = _newPasswordController.text;
+    // Функция для регистрации пользователя
+    Future<void> _registerUser() async {
+      final String username = usernameController.text;
+      final String email = emailController.text;
+      final String password = passwordController.text;
+      final String confirmPassword = confirmPasswordController.text;
 
-                if (newUser.isNotEmpty && newPassword.isNotEmpty) {
-                  final response = await http.post(
-                    Uri.parse('https://dair12.pythonanywhere.com/add_user/'),
-                    headers: {'Content-Type': 'application/json'},
-                    body: json.encode({'user': newUser, 'password': newPassword}),
-                  );
-
-                  if (response.statusCode == 200) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('User registered successfully')),
-                    );
-                  } else {
-                    print(response.statusCode);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Error registering user')),
-                    );
-                  }
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please fill out all fields')),
-                  );
-                }
-              },
-              child: const Text('Register'),
-            ),
-          ],
+      if (password != confirmPassword) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Passwords do not match')), // Проверка совпадения паролей
         );
-      },
+        return;
+      }
+
+      final url = Uri.parse("https://dair12.pythonanywhere.com/add_user/");
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "user": username,
+          "password": password,
+          "email": email,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Registration successful: ${responseData['message']}')),
+        );
+      } else {
+        final responseData = jsonDecode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${responseData['error']}')),
+        );
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          _buildTextInput(Icons.person, "Username", controller: usernameController), // Поле ввода имени пользователя
+          _buildTextInput(Icons.email, "Email", controller: emailController), // Поле ввода email
+          _buildTextInput(Icons.lock, "Password", obscure: true, controller: passwordController), // Поле ввода пароля
+          _buildTextInput(Icons.lock_outline, "Confirm Password", obscure: true, controller: confirmPasswordController), // Поле подтверждения пароля
+          const SizedBox(height: 10),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blueAccent,
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            onPressed: _registerUser, // Вызов функции регистрации
+            child: const Text("Register", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[850],
-      body: Stack(
-        children: [
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+      backgroundColor: const Color(0xFF0D47A1), // Синий фон
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bool isLandscape = constraints.maxWidth > constraints.maxHeight; // Проверка ориентации экрана
+
+            return Column(
+              children: [
+                const SizedBox(height: 30),
+                if (!isLandscape)
                   const Text(
-                    'Login',
-                    style: TextStyle(fontSize: 32, color: Colors.white),
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: _usernameController,
-                    decoration: InputDecoration(
-                      hintText: 'Username',
-                      filled: true,
-                      fillColor: Colors.grey[300],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                    'Welcome', // Приветственное сообщение
+                    style: TextStyle(
+                      fontSize: 28,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      hintText: 'Password',
-                      filled: true,
-                      fillColor: Colors.grey[300],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                if (!isLandscape) const SizedBox(height: 10),
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(40)), // Скругленные углы
                     ),
+                    child: isLandscape
+                        ? Row(
+                            children: [
+                              Expanded(
+                                flex: 1,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      const Text(
+                                        'Welcome',
+                                        style: TextStyle(
+                                          fontSize: 28,
+                                          color: Colors.blueAccent,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      _buildMainTabs(), // Вкладки Login и Register
+                                      const SizedBox(height: 20),
+                                      Expanded(
+                                        child: PageView(
+                                          controller: _pageController,
+                                          onPageChanged: (index) =>
+                                              setState(() => _tabIndex = index),
+                                          children: [
+                                            _buildLoginForm(), // Форма логина
+                                            _buildRegisterForm(), // Форма регистрации
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 1,
+                                child: Container(
+                                  alignment: Alignment.center,
+                                  // Дополнительное содержимое
+                                ),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              const SizedBox(height: 20),
+                              _buildMainTabs(), // Вкладки Login и Register
+                              const SizedBox(height: 20),
+                              Expanded(
+                                child: PageView(
+                                  controller: _pageController,
+                                  onPageChanged: (index) =>
+                                      setState(() => _tabIndex = index),
+                                  children: [
+                                    _buildLoginForm(), // Форма логина
+                                    _buildRegisterForm(), // Форма регистрации
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                   ),
-                  const SizedBox(height: 20),
-                  _isLoading
-                      ? const CircularProgressIndicator()
-                      : ElevatedButton(
-                    onPressed: () => _checkUsersAndLogin(context),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
-                    ),
-                    child: const Text('Login'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            top: 20,
-            right: 20,
-            child: IconButton(
-              icon: const Icon(Icons.person_add, color: Colors.white),
-              onPressed: () => _showRegistrationDialog(context),
-            ),
-          ),
-        ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
