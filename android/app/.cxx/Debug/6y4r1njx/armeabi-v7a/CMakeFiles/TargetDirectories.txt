@@ -1,0 +1,2 @@
+D:/GitHub/exchanger_flutter/android/app/.cxx/Debug/6y4r1njx/armeabi-v7a/CMakeFiles/edit_cache.dir
+D:/GitHub/exchanger_flutter/android/app/.cxx/Debug/6y4r1njx/armeabi-v7a/CMakeFiles/rebuild_cache.dir
