@@ -1,4 +1,5 @@
 import 'package:currencies/pages/settings.dart';
+import 'package:currencies/pages/userProfile.dart';
 import 'package:flutter/material.dart';
 import 'eventHistory.dart'; // Import the HistoryPage
 
@@ -50,7 +51,30 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: pages[_currentIndex], // Display the selected page
+      body: Stack(
+        children: [
+          pages[_currentIndex], // Display the selected page
+          if (_currentIndex == 0) // Показываем иконку только на главной странице
+            Positioned(
+              top: 48,
+              left: 16,
+              child: GestureDetector(
+                onTap: () {
+                  // Действие при нажатии на иконку профиля
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const UserProfile()),
+                  );
+                },
+                child: const Icon(
+                  Icons.account_circle,
+                  size: 32,
+                  color: Colors.black54, // Цвет иконки
+                ),
+              ),
+            ),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex, // Current selected tab
         onTap: (index) {

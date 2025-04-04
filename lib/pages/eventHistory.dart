@@ -176,31 +176,10 @@ class _EventState extends State<Event> {
       ),
       body: Stack(
         children: [
-          Container(
-            height: 140,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [blueGradientStart, blueGradientEnd],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 50),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  'История операций',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
               const SizedBox(height: 30),
               Expanded(
                 child: Container(
