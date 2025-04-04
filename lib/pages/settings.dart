@@ -223,7 +223,7 @@ class _SettingsHeaderScreenState extends State<SettingsHeaderScreen> {
                 value: selectedTheme,
                 isExpanded: true,
                 icon: const SizedBox.shrink(), // Hide default dropdown icon
-                items: ['Светлая', 'Тёмная', 'Системная']
+                items: ['Светлая', 'Тёмная']
                     .map((theme) => DropdownMenuItem<String>(
                           value: theme,
                           child: Text(
