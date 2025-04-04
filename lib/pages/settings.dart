@@ -68,16 +68,18 @@ class SettingsHeaderScreen extends StatelessWidget {
                   child: SafeArea(
                     child: Stack(
                       children: [
+                        // Back button
                         Positioned(
                           left: 16,
                           top: 16,
                           child: IconButton(
                             icon: const Icon(Icons.arrow_back, color: Colors.white),
                             onPressed: () {
-                              Navigator.pop(context);
+                              Navigator.pop(context); // Navigate back to the previous screen
                             },
                           ),
                         ),
+                        // Title
                         Align(
                           alignment: Alignment.topCenter,
                           child: Padding(
