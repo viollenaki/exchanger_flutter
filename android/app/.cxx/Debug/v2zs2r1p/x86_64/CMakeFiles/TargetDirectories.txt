@@ -1,0 +1,2 @@
+C:/Users/akbar/Desktop/frontend/currency/front/android/app/.cxx/Debug/v2zs2r1p/x86_64/CMakeFiles/edit_cache.dir
+C:/Users/akbar/Desktop/frontend/currency/front/android/app/.cxx/Debug/v2zs2r1p/x86_64/CMakeFiles/rebuild_cache.dir

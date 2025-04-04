@@ -1,5 +1,6 @@
 import 'package:currencies/pages/pinCode.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const MaterialApp(
@@ -8,13 +9,32 @@ void main() {
   ));
 }
 
-class SettingsHeaderScreen extends StatelessWidget {
+class SettingsHeaderScreen extends StatefulWidget {
   const SettingsHeaderScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    String selectedTheme = 'Светлая'; // Default selected theme
+  _SettingsHeaderScreenState createState() => _SettingsHeaderScreenState();
+}
 
+class _SettingsHeaderScreenState extends State<SettingsHeaderScreen> {
+  String selectedTheme = 'Светлая'; // Default selected theme
+  bool isPinEnabled = false; // Default state for PIN toggle
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPinState();
+  }
+
+  Future<void> _loadPinState() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      isPinEnabled = prefs.containsKey('pin'); // Check if PIN exists
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final List<Map<String, dynamic>> settingsItems = [
       {
         'icon': Icons.language,
@@ -31,12 +51,7 @@ class SettingsHeaderScreen extends StatelessWidget {
       {
         'icon': Icons.pin,
         'title': "Пин-код",
-        'onTap': (BuildContext context) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context)=> PinCodeScreen()),
-          );
-        },
+        'onTap': null, // Handled by toggle switch
       },
       {
         'icon': Icons.logout,
@@ -72,7 +87,8 @@ class SettingsHeaderScreen extends StatelessWidget {
                           left: 16,
                           top: 16,
                           child: IconButton(
-                            icon: const Icon(Icons.arrow_back, color: Colors.white),
+                            icon: const Icon(Icons.arrow_back,
+                                color: Colors.white),
                             onPressed: () {
                               Navigator.pop(context);
                             },
@@ -111,8 +127,42 @@ class SettingsHeaderScreen extends StatelessWidget {
                         final item = settingsItems[index];
                         if (item['title'] == 'Тема') {
                           return _buildThemeDropdown(selectedTheme, (newTheme) {
-                            selectedTheme = newTheme;
+                            setState(() {
+                              selectedTheme = newTheme;
+                            });
                             debugPrint('Selected Theme: $selectedTheme');
+                          });
+                        }
+                        if (item['title'] == 'Пин-код') {
+                          return _buildPinToggle(isPinEnabled,
+                              (newValue) async {
+                            if (newValue) {
+                              final result = await Navigator.pushNamed(
+                                  context, '/createPin');
+                              if (result == true) {
+                                setState(() {
+                                  isPinEnabled = true;
+                                });
+                              }
+                            } else {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const VerifyPinScreen(
+                                    isForDisablingPin: true,
+                                  ),
+                                ),
+                              );
+                              if (result == true) {
+                                final prefs =
+                                    await SharedPreferences.getInstance();
+                                await prefs.remove('pin');
+                                setState(() {
+                                  isPinEnabled = false;
+                                });
+                                debugPrint('PIN disabled');
+                              }
+                            }
                           });
                         }
                         return SettingsItem(
@@ -139,7 +189,8 @@ class SettingsHeaderScreen extends StatelessWidget {
   }
 
   // Custom Dropdown visually consistent with other items
-  Widget _buildThemeDropdown(String selectedTheme, ValueChanged<String> onChanged) {
+  Widget _buildThemeDropdown(
+      String selectedTheme, ValueChanged<String> onChanged) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -190,6 +241,80 @@ class SettingsHeaderScreen extends StatelessWidget {
             ),
           ),
           const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPinToggle(bool isPinEnabled, ValueChanged<bool> onChanged) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.blueAccent.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.pin, color: Colors.blueAccent, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              'Пин-код',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          Switch(
+            value: isPinEnabled,
+            onChanged: (newValue) async {
+              if (newValue) {
+                // Enable PIN
+                final result = await Navigator.pushNamed(context, '/createPin');
+                if (result == true) {
+                  setState(() {
+                    isPinEnabled = true;
+                  });
+                }
+              } else {
+                // Disable PIN
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const VerifyPinScreen(
+                      isForDisablingPin: true,
+                    ),
+                  ),
+                );
+                if (result == true) {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.remove('pin');
+                  setState(() {
+                    isPinEnabled = false;
+                  });
+                  debugPrint('PIN disabled');
+                }
+              }
+            },
+            activeColor: Colors.blueAccent,
+          ),
         ],
       ),
     );
