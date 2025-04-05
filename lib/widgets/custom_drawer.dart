@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:currencies/pages/addCurency.dart';
+import 'package:currencies/pages/addCurrencyScreen.dart';
 import 'package:currencies/pages/settings.dart';
 import 'package:currencies/pages/currency_screen.dart'; // Импорт нового экрана
 
