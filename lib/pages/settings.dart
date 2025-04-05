@@ -4,6 +4,7 @@ import 'package:currencies/pages/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:currencies/theme/theme_provider.dart';
+import 'package:currencies/widgets/custom_drawer.dart';
 
 void main() {
   runApp(const MaterialApp(
@@ -159,18 +160,18 @@ class _SettingsHeaderScreenState extends State<SettingsHeaderScreen> {
                     child: Stack(
                       children: [
                         // Back button
-                        Positioned(
-                          left: 16,
-                          top: 16,
-                          child: IconButton(
-                            icon: const Icon(Icons.arrow_back,
-                                color: Colors.white),
-                            onPressed: () {
-                              Navigator.pop(
-                                  context); // Navigate back to the previous screen
-                            },
-                          ),
-                        ),
+                        // Positioned(
+                        //   left: 16,
+                        //   top: 16,
+                        //   child: IconButton(
+                        //     icon: const Icon(Icons.arrow_back,
+                        //         color: Colors.white),
+                        //     onPressed: () {
+                        //       Navigator.pop(
+                        //           context); // Navigate back to the previous screen
+                        //     },
+                        //   ),
+                        // ),
                         // Title
                         Align(
                           alignment: Alignment.topCenter,
@@ -513,9 +514,163 @@ class Settings extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: true);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: const Center(child: Text('Settings Page')),
+      appBar: AppBar(
+        title: const Text('Настройки'),
+      ),
+      drawer: CustomDrawer(
+        drawerHeaderColor: Theme.of(context).primaryColor,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Appearance Settings
+            _buildSectionHeader(context, 'Внешний вид'),
+            _buildSettingsCard(
+              context,
+              Column(
+                children: [
+                  _buildSettingRow(
+                    context,
+                    'Темный режим',
+                    Switch(
+                      value: themeProvider.isDarkMode,
+                      onChanged: (value) {
+                        themeProvider.toggleTheme();
+                      },
+                      activeColor: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Security Settings
+            _buildSectionHeader(context, 'Безопасность'),
+            _buildSettingsCard(
+              context,
+              Column(
+                children: [
+                  _buildSettingRow(
+                    context,
+                    'PIN-код',
+                    IconButton(
+                      icon: Icon(Icons.arrow_forward_ios, size: 18),
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/createPin');
+                      },
+                    ),
+                  ),
+                  Divider(),
+                  _buildSettingRow(
+                    context,
+                    'Отпечаток пальца',
+                    Switch(
+                      value: false, // Replace with actual fingerprint state
+                      onChanged: (value) {
+                        // Implementation for fingerprint toggle
+                      },
+                      activeColor: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Language Settings
+            _buildSectionHeader(context, 'Язык и регион'),
+            _buildSettingsCard(
+              context,
+              Column(
+                children: [
+                  _buildSettingRow(
+                    context,
+                    'Язык приложения',
+                    DropdownButton<String>(
+                      value: 'Русский',
+                      underline: SizedBox(),
+                      items: ['Русский', 'English'].map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        // Implementation for language change
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // About Section
+            _buildSectionHeader(context, 'О приложении'),
+            _buildSettingsCard(
+              context,
+              Column(
+                children: [
+                  _buildSettingRow(
+                    context,
+                    'Версия',
+                    Text('1.0.0', style: TextStyle(color: Colors.grey)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsCard(BuildContext context, Widget content) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: content,
+      ),
+    );
+  }
+
+  Widget _buildSettingRow(BuildContext context, String title, Widget trailing) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: TextStyle(fontSize: 16),
+          ),
+          trailing,
+        ],
+      ),
     );
   }
 }

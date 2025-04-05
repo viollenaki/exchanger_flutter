@@ -1,7 +1,46 @@
+// import 'package:currencies/pages/overview.dart';
 import 'package:flutter/material.dart';
-import '../main.dart';
+import 'package:flutter/rendering.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:intl/intl.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
+import 'package:open_file/open_file.dart'; // Для открытия файла
+import 'package:share_plus/share_plus.dart'; // Для возможности поделиться файлом
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';import 'dart:ui' as ui;
+
+// Add this function to capture charts
+Future<ui.Image?> captureChartAsImage(GlobalKey chartKey) async {
+  try {
+    // Даём немного времени на отрисовку элементов
+    await Future.delayed(Duration(milliseconds: 50));
+
+    if (chartKey.currentContext == null) {
+      print('Error: No context found for key');
+      return null;
+    }
+
+    RenderRepaintBoundary? boundary =
+        chartKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    if (boundary == null) {
+      print('Error: No boundary found');
+      return null;
+    }
+
+    // Увеличьте pixelRatio для лучшего качества изображения
+    return await boundary.toImage(pixelRatio: 2.0);
+  } catch (e) {
+    print('Error capturing chart: $e');
+    return null;
+  }
+}
+
+// Add this function to convert ui.Image to PDF image
+Future<PdfBitmap> convertUiImageToPdfBitmap(ui.Image image) async {
+  final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+  final pngBytes = byteData?.buffer.asUint8List();
+  return PdfBitmap(pngBytes!);
+}
 
 class SalesData {
   final String
@@ -43,6 +82,383 @@ class _InformationState extends State<Information> {
   DateTimeRange? _selectedDateRange;
   List<Map<String, dynamic>> _filteredTransactions = [];
 
+  // Add GlobalKeys as class variables
+  final GlobalKey _transactionVolumeChartKey = GlobalKey();
+  final GlobalKey _weeklyChartKey = GlobalKey();
+  final GlobalKey _currencyTrendChartKey = GlobalKey();
+  final GlobalKey _pieChartKey = GlobalKey();
+
+  // Перед захватом графиков
+  // Создайте контроллер прокрутки
+  final scrollController = ScrollController();
+
+  Future<void> generatePdf() async {
+    // Показать диалог загрузки
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Text("Создание отчета...")
+            ],
+          ),
+        );
+      },
+    );
+
+    // Даем время графикам полностью отрисоваться
+    await Future.delayed(Duration(milliseconds: 1200));
+
+    // В методе generatePdf() добавьте прокрутку к нижним графикам
+    await scrollController.animateTo(
+      scrollController.position.maxScrollExtent,
+      duration: Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
+    await Future.delayed(Duration(milliseconds: 500));
+    // Теперь захватываем графики
+
+    // Захватываем все графики заранее
+    final ui.Image? chartImage1 =
+        await captureChartAsImage(_transactionVolumeChartKey);
+    final ui.Image? chartImage2 = await captureChartAsImage(_weeklyChartKey);
+    final ui.Image? chartImage3 =
+        await captureChartAsImage(_currencyTrendChartKey);
+    final ui.Image? chartImage4 = await captureChartAsImage(_pieChartKey);
+
+    // Конвертируем в PdfBitmap
+    PdfBitmap? pdfImage1;
+    PdfBitmap? pdfImage2;
+    PdfBitmap? pdfImage3;
+    PdfBitmap? pdfImage4;
+
+    if (chartImage1 != null)
+      pdfImage1 = await convertUiImageToPdfBitmap(chartImage1);
+    if (chartImage2 != null)
+      pdfImage2 = await convertUiImageToPdfBitmap(chartImage2);
+    if (chartImage3 != null)
+      pdfImage3 = await convertUiImageToPdfBitmap(chartImage3);
+    if (chartImage4 != null)
+      pdfImage4 = await convertUiImageToPdfBitmap(chartImage4);
+
+    // Создаем документ
+    final PdfDocument document = PdfDocument();
+
+    // Шрифты для всего документа
+    final PdfStandardFont titleFont =
+        PdfStandardFont(PdfFontFamily.helvetica, 20, style: PdfFontStyle.bold);
+    final PdfStandardFont sectionFont =
+        PdfStandardFont(PdfFontFamily.helvetica, 18, style: PdfFontStyle.bold);
+    final PdfStandardFont normalFont =
+        PdfStandardFont(PdfFontFamily.helvetica, 12);
+    final PdfStandardFont boldFont =
+        PdfStandardFont(PdfFontFamily.helvetica, 14, style: PdfFontStyle.bold);
+
+    // Отступы для всех страниц
+    final double margin = 40;
+
+    // -------- ТИТУЛЬНАЯ СТРАНИЦА --------
+    PdfPage page = document.pages.add();
+    double yPosition = margin;
+
+    // Заголовок отчета
+    page.graphics.drawString('Statistical Report', titleFont,
+        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
+        bounds: Rect.fromLTWH(
+            margin, yPosition, page.getClientSize().width - margin * 2, 30));
+    yPosition += 40;
+
+    // Дата создания
+    page.graphics.drawString(
+        'Date: ${DateTime.now().toString().split('.')[0]}', normalFont,
+        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
+        bounds: Rect.fromLTWH(
+            margin, yPosition, page.getClientSize().width - margin * 2, 20));
+    yPosition += 30;
+
+    // Если выбран диапазон дат
+    if (_selectedDateRange != null) {
+      page.graphics.drawString(
+          'Period: ${DateFormat('yyyy-MM-dd').format(_selectedDateRange!.start)} - ${DateFormat('yyyy-MM-dd').format(_selectedDateRange!.end)}',
+          normalFont,
+          brush: PdfSolidBrush(PdfColor(0, 0, 0)),
+          bounds: Rect.fromLTWH(
+              margin, yPosition, page.getClientSize().width - margin * 2, 20));
+      yPosition += 30;
+    }
+
+    // Общая прибыль
+    page.graphics.drawString(
+        'Profit: ${calculateTransactionSum(_filteredTransactions)} KGS',
+        boldFont,
+        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
+        bounds: Rect.fromLTWH(
+            margin, yPosition, page.getClientSize().width - margin * 2, 20));
+    yPosition += 40;
+
+    // Таблица транзакций
+    final PdfGrid grid = PdfGrid();
+    grid.style = PdfGridStyle(
+        font: normalFont,
+        cellPadding: PdfPaddings(left: 5, right: 5, top: 5, bottom: 5));
+
+    grid.columns.add(count: 7);
+    final PdfGridRow headerRow = grid.headers.add(1)[0];
+    headerRow.cells[0].value = 'ID';
+    headerRow.cells[1].value = 'Operation';
+    headerRow.cells[2].value = 'Currency';
+    headerRow.cells[3].value = 'Quantity';
+    headerRow.cells[4].value = 'Rate';
+    headerRow.cells[5].value = 'Description';
+    headerRow.cells[6].value = 'Date';
+
+    headerRow.style.font = boldFont;
+    headerRow.style.backgroundBrush = PdfSolidBrush(PdfColor(66, 114, 196));
+    headerRow.style.textBrush = PdfSolidBrush(PdfColor(255, 255, 255));
+
+    int maxRows =
+        _filteredTransactions.length > 20 ? 20 : _filteredTransactions.length;
+
+    for (int i = 0; i < maxRows; i++) {
+      var transaction = _filteredTransactions[i];
+      final PdfGridRow row = grid.rows.add();
+      row.cells[0].value = '${transaction['id'] ?? i + 1}';
+      row.cells[1].value = transaction['operation'] == 'sell' ? 'Sell' : 'Buy';
+      row.cells[2].value = '${transaction['currency']}';
+      row.cells[3].value = '${transaction['quantity']}';
+      row.cells[4].value = '${transaction['rate']}';
+      row.cells[5].value =
+          transaction['description']?.replaceAll(RegExp(r'[^\x00-\x7F]'), '') ??
+              '';
+      row.cells[6].value = '${transaction['created_at']}';
+    }
+
+    grid.draw(
+        page: page,
+        bounds: Rect.fromLTWH(
+            margin, yPosition, page.getClientSize().width - margin * 2, 0));
+
+    // -------- ГРАФИК 1: ПО КОЛИЧЕСТВУ ТРАНЗАКЦИЙ --------
+    page = document.pages.add();
+    yPosition = margin;
+
+    // Заголовок секции
+    page.graphics.drawString('By Transaction Count', sectionFont,
+        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
+        bounds: Rect.fromLTWH(
+            margin, yPosition, page.getClientSize().width - margin * 2, 30));
+    yPosition += 40;
+
+    // Описание
+    page.graphics.drawString(
+        'This chart shows the number of purchase operations (blue columns) and sales (red columns) for different currencies. The higher the column, the more operations were made with the currency.',
+        normalFont,
+        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
+        bounds: Rect.fromLTWH(
+            margin, yPosition, page.getClientSize().width - margin * 2, 60));
+    yPosition += 80;
+
+    // Добавляем место для изображения графика
+    // Здесь должен быть код для получения изображения из SfCartesianChart
+    // Для демонстрации добавляем прямоугольник, где должен быть график
+    if (pdfImage1 != null) {
+      page.graphics.drawImage(
+          pdfImage1,
+          Rect.fromLTWH(
+              margin, yPosition, page.getClientSize().width - margin * 2, 300));
+    }
+
+    page.graphics.drawString(
+        'Chart: Transaction Volume by Currency', normalFont,
+        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
+        bounds: Rect.fromLTWH(margin + 20, yPosition + 150, 300, 30));
+
+    // -------- ГРАФИК 2: ПО ДНЯМ НЕДЕЛИ --------
+    page = document.pages.add();
+    yPosition = margin;
+
+    page.graphics.drawString('By Day of Week', sectionFont,
+        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
+        bounds: Rect.fromLTWH(
+            margin, yPosition, page.getClientSize().width - margin * 2, 30));
+    yPosition += 40;
+
+    page.graphics.drawString(
+        'The chart shows operation activity by day of week. You can select a specific day to see transaction distribution by hour.',
+        normalFont,
+        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
+        bounds: Rect.fromLTWH(
+            margin, yPosition, page.getClientSize().width - margin * 2, 60));
+    yPosition += 80;
+
+// For chart 2 (weekly chart)
+    if (pdfImage2 != null) {
+      page.graphics.drawImage(
+          pdfImage2,
+          Rect.fromLTWH(
+              margin, yPosition, page.getClientSize().width - margin * 2, 300));
+    } else {
+      // Fallback to rectangle if chart capture fails
+      page.graphics.drawRectangle(
+          pen: PdfPen(PdfColor(0, 0, 0)),
+          bounds: Rect.fromLTWH(
+              margin, yPosition, page.getClientSize().width - margin * 2, 300));
+
+      page.graphics.drawString('Chart: Transactions by Day of Week', normalFont,
+          brush: PdfSolidBrush(PdfColor(0, 0, 0)),
+          bounds: Rect.fromLTWH(margin + 20, yPosition + 150, 300, 30));
+    }
+
+// -------- ГРАФИК 3: ПО ДИНАМИКЕ РОСТА ВАЛЮТЫ --------
+    page = document.pages.add();
+    yPosition = margin;
+
+    page.graphics.drawString('By Currency Growth Dynamics', sectionFont,
+        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
+        bounds: Rect.fromLTWH(
+            margin, yPosition, page.getClientSize().width - margin * 2, 30));
+    yPosition += 40;
+
+    page.graphics.drawString(
+        'The line graph shows the exchange rate changes for the selected currency over a period. You can compare the dynamics of buying and selling prices.',
+        normalFont,
+        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
+        bounds: Rect.fromLTWH(
+            margin, yPosition, page.getClientSize().width - margin * 2, 60));
+    yPosition += 80;
+
+// For chart 3 (currency trend chart)
+    if (pdfImage3 != null) {
+      page.graphics.drawImage(
+          pdfImage3,
+          Rect.fromLTWH(
+              margin, yPosition, page.getClientSize().width - margin * 2, 300));
+    } else {
+      // Fallback to rectangle if chart capture fails
+      page.graphics.drawRectangle(
+          pen: PdfPen(PdfColor(0, 0, 0)),
+          bounds: Rect.fromLTWH(
+              margin, yPosition, page.getClientSize().width - margin * 2, 300));
+
+      page.graphics.drawString(
+          'Chart: Currency Exchange Rate Dynamics for $_selectedCurrency ($_selectedOperation)',
+          normalFont,
+          brush: PdfSolidBrush(PdfColor(0, 0, 0)),
+          bounds: Rect.fromLTWH(margin + 20, yPosition + 150, 350, 30));
+    }
+
+// -------- ГРАФИК 4: ПО ОБЪЁМУ ВАЛЮТЫ --------
+    page = document.pages.add();
+    yPosition = margin;
+
+    page.graphics.drawString('By Currency Volume', sectionFont,
+        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
+        bounds: Rect.fromLTWH(
+            margin, yPosition, page.getClientSize().width - margin * 2, 30));
+    yPosition += 40;
+
+    page.graphics.drawString(
+        'The pie chart shows the distribution of operations by currency. The segment size corresponds to the share of operations with each currency.',
+        normalFont,
+        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
+        bounds: Rect.fromLTWH(
+            margin, yPosition, page.getClientSize().width - margin * 2, 60));
+    yPosition += 80;
+
+// For chart 4 (pie chart)
+    if (pdfImage4 != null) {
+      page.graphics.drawImage(
+          pdfImage4,
+          Rect.fromLTWH(margin, yPosition,
+              page.getClientSize().width - margin * 0.5, 350));
+    } else {
+      // Fallback to rectangle if chart capture fails
+      page.graphics.drawRectangle(
+          pen: PdfPen(PdfColor(0, 0, 0)),
+          bounds: Rect.fromLTWH(margin, yPosition,
+              page.getClientSize().width - margin * 0.5, 350));
+
+      page.graphics.drawString(
+          'Chart: Currency Volume Distribution', normalFont,
+          brush: PdfSolidBrush(PdfColor(0, 0, 0)),
+          bounds: Rect.fromLTWH(margin + 20, yPosition + 150, 300, 30));
+    }
+
+    // Сохраняем PDF в нужную директорию
+    final String path;
+    final String fileName =
+        'currency_report_${DateTime.now().millisecondsSinceEpoch}.pdf';
+
+    if (Platform.isAndroid) {
+      final directory = Directory('/storage/emulated/0/Download');
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
+      }
+      path = '${directory.path}/$fileName';
+    } else {
+      final directory = await getApplicationDocumentsDirectory();
+      path = '${directory.path}/$fileName';
+    }
+
+    final File file = File(path);
+    await file.writeAsBytes(await document.save());
+    document.dispose();
+
+    // Закрыть диалог загрузки
+    Navigator.pop(context);
+
+    // Показываем диалог с опциями
+    _showPdfActionDialog(context, file, fileName);
+  }
+
+// Диалог для выбора действия с PDF
+  void _showPdfActionDialog(BuildContext context, File file, String fileName) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Report Generated'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('File saved as:'),
+            SizedBox(height: 8),
+            Text(fileName, style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 16),
+            Text('What would you like to do with the file?'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              OpenFile.open(file.path);
+            },
+            child: Text('Open'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Share.shareXFiles([XFile(file.path)],
+                  text: 'Currency Statistics Report');
+            },
+            child: Text('Share'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -61,7 +477,7 @@ class _InformationState extends State<Information> {
         _filteredTransactions = _transactions.where((transaction) {
           try {
             DateTime date =
-                DateFormat('yyyy-MM-dd HH-mm').parse(transaction['created_at']);
+                DateFormat('yyyy-MM-dd HH:mm').parse(transaction['created_at']);
             return date.isAfter(dateRange.start.subtract(Duration(days: 1))) &&
                 date.isBefore(dateRange.end.add(Duration(days: 1)));
           } catch (e) {
@@ -76,7 +492,8 @@ class _InformationState extends State<Information> {
   Future<void> _showDateRangePicker() async {
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
-      initialEntryMode: DatePickerEntryMode.calendarOnly, // ← Убирает иконку карандаша
+      initialEntryMode:
+          DatePickerEntryMode.calendarOnly, // ← Убирает иконку карандаша
       firstDate: DateTime(2000),
       lastDate: DateTime(2030),
       currentDate: DateTime.now(),
@@ -144,7 +561,7 @@ class _InformationState extends State<Information> {
 
     for (var transaction in _filteredTransactions) {
       DateTime date =
-          DateFormat('yyyy-MM-dd HH-mm').parse(transaction['created_at']);
+          DateFormat('yyyy-MM-dd HH:mm').parse(transaction['created_at']);
       String day = _getDayOfWeek(date.weekday);
       dayCounts.update(day, (value) => value + 1);
     }
@@ -163,7 +580,7 @@ class _InformationState extends State<Information> {
 
     for (var transaction in _filteredTransactions) {
       DateTime date =
-          DateFormat('yyyy-MM-dd HH-mm').parse(transaction['created_at']);
+          DateFormat('yyyy-MM-dd HH:mm').parse(transaction['created_at']);
       if (_getDayOfWeek(date.weekday) == day) {
         hourCounts.update(date.hour, (value) => value + 1);
       }
@@ -244,7 +661,7 @@ class _InformationState extends State<Information> {
       'quantity': 758.3,
       'rate': 531.03,
       'description': 'Transaction 1',
-      'created_at': '2025-03-18 11-55'
+      'created_at': '2025-03-18 11:55'
     },
     {
       'id': 2,
@@ -253,7 +670,7 @@ class _InformationState extends State<Information> {
       'quantity': 554.48,
       'rate': 438.82,
       'description': 'Transaction 2',
-      'created_at': '2025-03-13 22-30'
+      'created_at': '2025-03-13 22:30'
     },
     {
       'id': 3,
@@ -262,7 +679,7 @@ class _InformationState extends State<Information> {
       'quantity': 361.06,
       'rate': 326.28,
       'description': 'Transaction 3',
-      'created_at': '2025-03-07 15-08'
+      'created_at': '2025-03-07 15:08'
     },
     {
       'id': 4,
@@ -271,7 +688,7 @@ class _InformationState extends State<Information> {
       'quantity': 842.35,
       'rate': 226.09,
       'description': 'Transaction 4',
-      'created_at': '2025-03-14 06-27'
+      'created_at': '2025-03-14 06:27'
     },
     {
       'id': 5,
@@ -280,853 +697,7 @@ class _InformationState extends State<Information> {
       'quantity': 851.42,
       'rate': 539.99,
       'description': 'Transaction 5',
-      'created_at': '2025-03-31 08-04'
-    },
-    {
-      'id': 6,
-      'operation': 'sell',
-      'currency': 'EUR',
-      'quantity': 552.44,
-      'rate': 738.72,
-      'description': 'Transaction 6',
-      'created_at': '2025-03-12 20-26'
-    },
-    {
-      'id': 7,
-      'operation': 'sell',
-      'currency': 'CNY',
-      'quantity': 605.74,
-      'rate': 399.92,
-      'description': 'Transaction 7',
-      'created_at': '2025-03-23 23-58'
-    },
-    {
-      'id': 8,
-      'operation': 'buy',
-      'currency': 'KGS',
-      'quantity': 986.05,
-      'rate': 340.87,
-      'description': 'Transaction 8',
-      'created_at': '2025-03-21 12-33'
-    },
-    {
-      'id': 9,
-      'operation': 'sell',
-      'currency': 'RUB',
-      'quantity': 137.2,
-      'rate': 952.76,
-      'description': 'Transaction 9',
-      'created_at': '2025-03-10 03-23'
-    },
-    {
-      'id': 10,
-      'operation': 'buy',
-      'currency': 'EUR',
-      'quantity': 739.32,
-      'rate': 354.53,
-      'description': 'Transaction 10',
-      'created_at': '2025-03-11 16-06'
-    },
-    {
-      'id': 11,
-      'operation': 'buy',
-      'currency': 'USD',
-      'quantity': 822.91,
-      'rate': 434.82,
-      'description': 'Transaction 11',
-      'created_at': '2025-03-27 05-18'
-    },
-    {
-      'id': 12,
-      'operation': 'sell',
-      'currency': 'KGS',
-      'quantity': 398.66,
-      'rate': 213.98,
-      'description': 'Transaction 12',
-      'created_at': '2025-03-30 00-30'
-    },
-    {
-      'id': 13,
-      'operation': 'buy',
-      'currency': 'RUB',
-      'quantity': 567.64,
-      'rate': 960.08,
-      'description': 'Transaction 13',
-      'created_at': '2025-03-19 10-46'
-    },
-    {
-      'id': 14,
-      'operation': 'buy',
-      'currency': 'USD',
-      'quantity': 346.62,
-      'rate': 690.46,
-      'description': 'Transaction 14',
-      'created_at': '2025-03-15 07-02'
-    },
-    {
-      'id': 15,
-      'operation': 'buy',
-      'currency': 'KGS',
-      'quantity': 364.39,
-      'rate': 658.41,
-      'description': 'Transaction 15',
-      'created_at': '2025-03-25 03-00'
-    },
-    {
-      'id': 16,
-      'operation': 'sell',
-      'currency': 'RUB',
-      'quantity': 865.11,
-      'rate': 194.99,
-      'description': 'Transaction 16',
-      'created_at': '2025-03-09 05-17'
-    },
-    {
-      'id': 17,
-      'operation': 'buy',
-      'currency': 'EUR',
-      'quantity': 514.04,
-      'rate': 136.23,
-      'description': 'Transaction 17',
-      'created_at': '2025-03-27 05-34'
-    },
-    {
-      'id': 18,
-      'operation': 'sell',
-      'currency': 'CNY',
-      'quantity': 356.42,
-      'rate': 856.89,
-      'description': 'Transaction 18',
-      'created_at': '2025-03-01 06-56'
-    },
-    {
-      'id': 19,
-      'operation': 'buy',
-      'currency': 'CNY',
-      'quantity': 252.12,
-      'rate': 120.77,
-      'description': 'Transaction 19',
-      'created_at': '2025-03-17 20-24'
-    },
-    {
-      'id': 20,
-      'operation': 'sell',
-      'currency': 'CNY',
-      'quantity': 21.87,
-      'rate': 530.49,
-      'description': 'Transaction 20',
-      'created_at': '2025-03-26 22-24'
-    },
-    {
-      'id': 21,
-      'operation': 'sell',
-      'currency': 'USD',
-      'quantity': 903.63,
-      'rate': 323.38,
-      'description': 'Transaction 21',
-      'created_at': '2025-03-14 23-44'
-    },
-    {
-      'id': 22,
-      'operation': 'buy',
-      'currency': 'KGS',
-      'quantity': 888.04,
-      'rate': 233.7,
-      'description': 'Transaction 22',
-      'created_at': '2025-03-24 05-44'
-    },
-    {
-      'id': 23,
-      'operation': 'buy',
-      'currency': 'CNY',
-      'quantity': 164.74,
-      'rate': 882.34,
-      'description': 'Transaction 23',
-      'created_at': '2025-03-26 21-35'
-    },
-    {
-      'id': 24,
-      'operation': 'buy',
-      'currency': 'CNY',
-      'quantity': 395.61,
-      'rate': 623.08,
-      'description': 'Transaction 24',
-      'created_at': '2025-03-02 08-14'
-    },
-    {
-      'id': 25,
-      'operation': 'buy',
-      'currency': 'KGS',
-      'quantity': 682.21,
-      'rate': 434.17,
-      'description': 'Transaction 25',
-      'created_at': '2025-03-22 20-44'
-    },
-    {
-      'id': 26,
-      'operation': 'sell',
-      'currency': 'KGS',
-      'quantity': 903.74,
-      'rate': 135.94,
-      'description': 'Transaction 26',
-      'created_at': '2025-04-01 18-53'
-    },
-    {
-      'id': 27,
-      'operation': 'sell',
-      'currency': 'KGS',
-      'quantity': 40.23,
-      'rate': 582.87,
-      'description': 'Transaction 27',
-      'created_at': '2025-03-28 10-25'
-    },
-    {
-      'id': 28,
-      'operation': 'sell',
-      'currency': 'RUB',
-      'quantity': 684.14,
-      'rate': 53.84,
-      'description': 'Transaction 28',
-      'created_at': '2025-03-11 23-56'
-    },
-    {
-      'id': 29,
-      'operation': 'sell',
-      'currency': 'EUR',
-      'quantity': 932.83,
-      'rate': 645.9,
-      'description': 'Transaction 29',
-      'created_at': '2025-03-23 04-15'
-    },
-    {
-      'id': 30,
-      'operation': 'sell',
-      'currency': 'CNY',
-      'quantity': 521.71,
-      'rate': 158.38,
-      'description': 'Transaction 30',
-      'created_at': '2025-03-17 06-55'
-    },
-    {
-      'id': 31,
-      'operation': 'sell',
-      'currency': 'USD',
-      'quantity': 451.58,
-      'rate': 597.53,
-      'description': 'Transaction 31',
-      'created_at': '2025-03-27 21-45'
-    },
-    {
-      'id': 32,
-      'operation': 'buy',
-      'currency': 'KGS',
-      'quantity': 371.73,
-      'rate': 800.36,
-      'description': 'Transaction 32',
-      'created_at': '2025-03-20 04-51'
-    },
-    {
-      'id': 33,
-      'operation': 'buy',
-      'currency': 'CNY',
-      'quantity': 144.5,
-      'rate': 251.35,
-      'description': 'Transaction 33',
-      'created_at': '2025-03-19 22-38'
-    },
-    {
-      'id': 34,
-      'operation': 'sell',
-      'currency': 'KGS',
-      'quantity': 577.9,
-      'rate': 457.3,
-      'description': 'Transaction 34',
-      'created_at': '2025-04-02 22-45'
-    },
-    {
-      'id': 35,
-      'operation': 'sell',
-      'currency': 'EUR',
-      'quantity': 193.04,
-      'rate': 372.29,
-      'description': 'Transaction 35',
-      'created_at': '2025-03-20 10-59'
-    },
-    {
-      'id': 36,
-      'operation': 'buy',
-      'currency': 'CNY',
-      'quantity': 691.41,
-      'rate': 134.97,
-      'description': 'Transaction 36',
-      'created_at': '2025-03-17 22-50'
-    },
-    {
-      'id': 37,
-      'operation': 'buy',
-      'currency': 'RUB',
-      'quantity': 369.49,
-      'rate': 877.56,
-      'description': 'Transaction 37',
-      'created_at': '2025-03-28 13-45'
-    },
-    {
-      'id': 38,
-      'operation': 'sell',
-      'currency': 'RUB',
-      'quantity': 791.53,
-      'rate': 956.66,
-      'description': 'Transaction 38',
-      'created_at': '2025-03-18 17-42'
-    },
-    {
-      'id': 39,
-      'operation': 'buy',
-      'currency': 'KGS',
-      'quantity': 48.69,
-      'rate': 673.37,
-      'description': 'Transaction 39',
-      'created_at': '2025-03-09 15-15'
-    },
-    {
-      'id': 40,
-      'operation': 'sell',
-      'currency': 'CNY',
-      'quantity': 378.84,
-      'rate': 121.82,
-      'description': 'Transaction 40',
-      'created_at': '2025-03-27 02-55'
-    },
-    {
-      'id': 41,
-      'operation': 'buy',
-      'currency': 'USD',
-      'quantity': 655.81,
-      'rate': 855.53,
-      'description': 'Transaction 41',
-      'created_at': '2025-03-19 08-21'
-    },
-    {
-      'id': 42,
-      'operation': 'buy',
-      'currency': 'RUB',
-      'quantity': 500.97,
-      'rate': 987.3,
-      'description': 'Transaction 42',
-      'created_at': '2025-03-31 07-54'
-    },
-    {
-      'id': 43,
-      'operation': 'buy',
-      'currency': 'CNY',
-      'quantity': 27.22,
-      'rate': 752.79,
-      'description': 'Transaction 43',
-      'created_at': '2025-03-15 04-49'
-    },
-    {
-      'id': 44,
-      'operation': 'sell',
-      'currency': 'RUB',
-      'quantity': 576.15,
-      'rate': 698.46,
-      'description': 'Transaction 44',
-      'created_at': '2025-03-27 20-40'
-    },
-    {
-      'id': 45,
-      'operation': 'buy',
-      'currency': 'KGS',
-      'quantity': 106.17,
-      'rate': 739.7,
-      'description': 'Transaction 45',
-      'created_at': '2025-03-30 09-40'
-    },
-    {
-      'id': 46,
-      'operation': 'sell',
-      'currency': 'CNY',
-      'quantity': 109.82,
-      'rate': 444.59,
-      'description': 'Transaction 46',
-      'created_at': '2025-03-30 01-57'
-    },
-    {
-      'id': 47,
-      'operation': 'sell',
-      'currency': 'CNY',
-      'quantity': 80.42,
-      'rate': 330.64,
-      'description': 'Transaction 47',
-      'created_at': '2025-03-01 20-38'
-    },
-    {
-      'id': 48,
-      'operation': 'buy',
-      'currency': 'CNY',
-      'quantity': 330.94,
-      'rate': 880.38,
-      'description': 'Transaction 48',
-      'created_at': '2025-03-10 15-10'
-    },
-    {
-      'id': 49,
-      'operation': 'buy',
-      'currency': 'KGS',
-      'quantity': 306.81,
-      'rate': 327.56,
-      'description': 'Transaction 49',
-      'created_at': '2025-03-05 15-40'
-    },
-    {
-      'id': 50,
-      'operation': 'sell',
-      'currency': 'EUR',
-      'quantity': 504.01,
-      'rate': 743.07,
-      'description': 'Transaction 50',
-      'created_at': '2025-03-18 07-13'
-    },
-    {
-      'id': 51,
-      'operation': 'sell',
-      'currency': 'KGS',
-      'quantity': 23.74,
-      'rate': 782.45,
-      'description': 'Transaction 51',
-      'created_at': '2025-03-16 02-02'
-    },
-    {
-      'id': 52,
-      'operation': 'sell',
-      'currency': 'CNY',
-      'quantity': 153.34,
-      'rate': 148.34,
-      'description': 'Transaction 52',
-      'created_at': '2025-03-30 15-00'
-    },
-    {
-      'id': 53,
-      'operation': 'sell',
-      'currency': 'KGS',
-      'quantity': 636.34,
-      'rate': 677.89,
-      'description': 'Transaction 53',
-      'created_at': '2025-03-09 16-14'
-    },
-    {
-      'id': 54,
-      'operation': 'buy',
-      'currency': 'EUR',
-      'quantity': 653.51,
-      'rate': 76.78,
-      'description': 'Transaction 54',
-      'created_at': '2025-03-16 23-12'
-    },
-    {
-      'id': 55,
-      'operation': 'sell',
-      'currency': 'KGS',
-      'quantity': 673.94,
-      'rate': 367.72,
-      'description': 'Transaction 55',
-      'created_at': '2025-03-21 15-30'
-    },
-    {
-      'id': 56,
-      'operation': 'buy',
-      'currency': 'RUB',
-      'quantity': 161.75,
-      'rate': 886.25,
-      'description': 'Transaction 56',
-      'created_at': '2025-04-03 21-34'
-    },
-    {
-      'id': 57,
-      'operation': 'sell',
-      'currency': 'CNY',
-      'quantity': 701.54,
-      'rate': 244.32,
-      'description': 'Transaction 57',
-      'created_at': '2025-03-19 06-14'
-    },
-    {
-      'id': 58,
-      'operation': 'buy',
-      'currency': 'USD',
-      'quantity': 423.35,
-      'rate': 664.46,
-      'description': 'Transaction 58',
-      'created_at': '2025-03-17 09-15'
-    },
-    {
-      'id': 59,
-      'operation': 'sell',
-      'currency': 'EUR',
-      'quantity': 103.99,
-      'rate': 985.68,
-      'description': 'Transaction 59',
-      'created_at': '2025-03-16 11-33'
-    },
-    {
-      'id': 60,
-      'operation': 'buy',
-      'currency': 'RUB',
-      'quantity': 179.14,
-      'rate': 850.13,
-      'description': 'Transaction 60',
-      'created_at': '2025-03-02 01-08'
-    },
-    {
-      'id': 61,
-      'operation': 'buy',
-      'currency': 'CNY',
-      'quantity': 13.64,
-      'rate': 279.03,
-      'description': 'Transaction 61',
-      'created_at': '2025-03-16 23-24'
-    },
-    {
-      'id': 62,
-      'operation': 'sell',
-      'currency': 'RUB',
-      'quantity': 946.54,
-      'rate': 260.67,
-      'description': 'Transaction 62',
-      'created_at': '2025-03-05 14-47'
-    },
-    {
-      'id': 63,
-      'operation': 'buy',
-      'currency': 'EUR',
-      'quantity': 309.01,
-      'rate': 727.33,
-      'description': 'Transaction 63',
-      'created_at': '2025-03-22 02-52'
-    },
-    {
-      'id': 64,
-      'operation': 'sell',
-      'currency': 'USD',
-      'quantity': 138.88,
-      'rate': 707.1,
-      'description': 'Transaction 64',
-      'created_at': '2025-03-14 11-36'
-    },
-    {
-      'id': 65,
-      'operation': 'buy',
-      'currency': 'USD',
-      'quantity': 791.69,
-      'rate': 897.78,
-      'description': 'Transaction 65',
-      'created_at': '2025-03-05 12-42'
-    },
-    {
-      'id': 66,
-      'operation': 'buy',
-      'currency': 'RUB',
-      'quantity': 621.5,
-      'rate': 452.44,
-      'description': 'Transaction 66',
-      'created_at': '2025-03-27 08-58'
-    },
-    {
-      'id': 67,
-      'operation': 'sell',
-      'currency': 'RUB',
-      'quantity': 903.46,
-      'rate': 671.07,
-      'description': 'Transaction 67',
-      'created_at': '2025-03-18 22-29'
-    },
-    {
-      'id': 68,
-      'operation': 'buy',
-      'currency': 'CNY',
-      'quantity': 722.59,
-      'rate': 543.35,
-      'description': 'Transaction 68',
-      'created_at': '2025-03-15 00-25'
-    },
-    {
-      'id': 69,
-      'operation': 'sell',
-      'currency': 'RUB',
-      'quantity': 380.71,
-      'rate': 679.99,
-      'description': 'Transaction 69',
-      'created_at': '2025-03-31 12-58'
-    },
-    {
-      'id': 70,
-      'operation': 'buy',
-      'currency': 'RUB',
-      'quantity': 603.57,
-      'rate': 713.12,
-      'description': 'Transaction 70',
-      'created_at': '2025-03-06 02-26'
-    },
-    {
-      'id': 71,
-      'operation': 'sell',
-      'currency': 'KGS',
-      'quantity': 633.85,
-      'rate': 582.96,
-      'description': 'Transaction 71',
-      'created_at': '2025-03-24 12-10'
-    },
-    {
-      'id': 72,
-      'operation': 'sell',
-      'currency': 'KGS',
-      'quantity': 420.87,
-      'rate': 56.51,
-      'description': 'Transaction 72',
-      'created_at': '2025-03-22 23-57'
-    },
-    {
-      'id': 73,
-      'operation': 'buy',
-      'currency': 'KGS',
-      'quantity': 894.64,
-      'rate': 198.6,
-      'description': 'Transaction 73',
-      'created_at': '2025-03-12 19-03'
-    },
-    {
-      'id': 74,
-      'operation': 'sell',
-      'currency': 'CNY',
-      'quantity': 509.78,
-      'rate': 643.61,
-      'description': 'Transaction 74',
-      'created_at': '2025-03-28 19-28'
-    },
-    {
-      'id': 75,
-      'operation': 'sell',
-      'currency': 'USD',
-      'quantity': 995.08,
-      'rate': 546.68,
-      'description': 'Transaction 75',
-      'created_at': '2025-03-22 16-58'
-    },
-    {
-      'id': 76,
-      'operation': 'sell',
-      'currency': 'EUR',
-      'quantity': 251.94,
-      'rate': 770.53,
-      'description': 'Transaction 76',
-      'created_at': '2025-03-25 06-53'
-    },
-    {
-      'id': 77,
-      'operation': 'sell',
-      'currency': 'CNY',
-      'quantity': 73.84,
-      'rate': 986.7,
-      'description': 'Transaction 77',
-      'created_at': '2025-03-14 17-33'
-    },
-    {
-      'id': 78,
-      'operation': 'sell',
-      'currency': 'USD',
-      'quantity': 187.22,
-      'rate': 352.7,
-      'description': 'Transaction 78',
-      'created_at': '2025-03-02 17-05'
-    },
-    {
-      'id': 79,
-      'operation': 'buy',
-      'currency': 'CNY',
-      'quantity': 570.63,
-      'rate': 816.12,
-      'description': 'Transaction 79',
-      'created_at': '2025-03-12 11-35'
-    },
-    {
-      'id': 80,
-      'operation': 'sell',
-      'currency': 'RUB',
-      'quantity': 36.55,
-      'rate': 203.48,
-      'description': 'Transaction 80',
-      'created_at': '2025-03-07 17-28'
-    },
-    {
-      'id': 81,
-      'operation': 'buy',
-      'currency': 'USD',
-      'quantity': 444.64,
-      'rate': 318.56,
-      'description': 'Transaction 81',
-      'created_at': '2025-03-06 20-04'
-    },
-    {
-      'id': 82,
-      'operation': 'buy',
-      'currency': 'CNY',
-      'quantity': 440.53,
-      'rate': 380.38,
-      'description': 'Transaction 82',
-      'created_at': '2025-03-14 18-23'
-    },
-    {
-      'id': 83,
-      'operation': 'buy',
-      'currency': 'RUB',
-      'quantity': 792.04,
-      'rate': 69.62,
-      'description': 'Transaction 83',
-      'created_at': '2025-03-07 16-58'
-    },
-    {
-      'id': 84,
-      'operation': 'buy',
-      'currency': 'CNY',
-      'quantity': 599.32,
-      'rate': 975.09,
-      'description': 'Transaction 84',
-      'created_at': '2025-03-21 12-39'
-    },
-    {
-      'id': 85,
-      'operation': 'sell',
-      'currency': 'CNY',
-      'quantity': 656.92,
-      'rate': 291.01,
-      'description': 'Transaction 85',
-      'created_at': '2025-03-09 15-52'
-    },
-    {
-      'id': 86,
-      'operation': 'sell',
-      'currency': 'USD',
-      'quantity': 934.54,
-      'rate': 729.75,
-      'description': 'Transaction 86',
-      'created_at': '2025-03-31 18-48'
-    },
-    {
-      'id': 87,
-      'operation': 'sell',
-      'currency': 'EUR',
-      'quantity': 906.74,
-      'rate': 336.27,
-      'description': 'Transaction 87',
-      'created_at': '2025-03-17 06-54'
-    },
-    {
-      'id': 88,
-      'operation': 'sell',
-      'currency': 'KGS',
-      'quantity': 896.03,
-      'rate': 904.16,
-      'description': 'Transaction 88',
-      'created_at': '2025-03-31 14-40'
-    },
-    {
-      'id': 89,
-      'operation': 'sell',
-      'currency': 'USD',
-      'quantity': 46.0,
-      'rate': 479.61,
-      'description': 'Transaction 89',
-      'created_at': '2025-03-03 01-31'
-    },
-    {
-      'id': 90,
-      'operation': 'sell',
-      'currency': 'USD',
-      'quantity': 765.81,
-      'rate': 118.32,
-      'description': 'Transaction 90',
-      'created_at': '2025-03-31 22-48'
-    },
-    {
-      'id': 91,
-      'operation': 'sell',
-      'currency': 'USD',
-      'quantity': 379.07,
-      'rate': 277.16,
-      'description': 'Transaction 91',
-      'created_at': '2025-03-02 19-57'
-    },
-    {
-      'id': 92,
-      'operation': 'buy',
-      'currency': 'USD',
-      'quantity': 758.94,
-      'rate': 362.27,
-      'description': 'Transaction 92',
-      'created_at': '2025-03-16 17-01'
-    },
-    {
-      'id': 93,
-      'operation': 'sell',
-      'currency': 'KGS',
-      'quantity': 313.25,
-      'rate': 149.08,
-      'description': 'Transaction 93',
-      'created_at': '2025-03-06 19-08'
-    },
-    {
-      'id': 94,
-      'operation': 'sell',
-      'currency': 'KGS',
-      'quantity': 248.62,
-      'rate': 681.33,
-      'description': 'Transaction 94',
-      'created_at': '2025-03-19 14-06'
-    },
-    {
-      'id': 95,
-      'operation': 'buy',
-      'currency': 'USD',
-      'quantity': 451.36,
-      'rate': 476.69,
-      'description': 'Transaction 95',
-      'created_at': '2025-04-01 05-00'
-    },
-    {
-      'id': 96,
-      'operation': 'sell',
-      'currency': 'USD',
-      'quantity': 868.03,
-      'rate': 893.72,
-      'description': 'Transaction 96',
-      'created_at': '2025-03-23 00-57'
-    },
-    {
-      'id': 97,
-      'operation': 'buy',
-      'currency': 'RUB',
-      'quantity': 632.96,
-      'rate': 515.34,
-      'description': 'Transaction 97',
-      'created_at': '2025-03-21 00-45'
-    },
-    {
-      'id': 98,
-      'operation': 'sell',
-      'currency': 'RUB',
-      'quantity': 975.8,
-      'rate': 319.83,
-      'description': 'Transaction 98',
-      'created_at': '2025-03-17 15-21'
-    },
-    {
-      'id': 99,
-      'operation': 'buy',
-      'currency': 'RUB',
-      'quantity': 928.74,
-      'rate': 349.3,
-      'description': 'Transaction 99',
-      'created_at': '2025-03-04 11-02'
+      'created_at': '2025-03-31 08:04'
     },
     {
       'id': 100,
@@ -1135,7 +706,7 @@ class _InformationState extends State<Information> {
       'quantity': 979.07,
       'rate': 80.38,
       'description': 'Transaction 100',
-      'created_at': '2025-03-18 07-35'
+      'created_at': '2025-03-18 07:35'
     }
   ];
 
@@ -1147,7 +718,7 @@ class _InformationState extends State<Information> {
         child: Text(
           title,
           style: TextStyle(
-              fontSize: 27, fontWeight: FontWeight.bold, color: Colors.white),
+              fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
         ),
       ),
     );
@@ -1194,13 +765,12 @@ class _InformationState extends State<Information> {
   }
 
   // Метод сброса фильтра
-void _resetFilter() {
-  setState(() {
-    _selectedDateRange = null;
-    _filteredTransactions = _transactions;
-  });
-}
-
+  void _resetFilter() {
+    setState(() {
+      _selectedDateRange = null;
+      _filteredTransactions = _transactions;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1218,10 +788,10 @@ void _resetFilter() {
         centerTitle: true,
 
         // Добавляем кнопку сброса фильтра в leading
-  leading: IconButton(
-    icon: Icon(Icons.refresh, color: Colors.white), // Иконка сброса
-    onPressed: _resetFilter, // Вызывает метод сброса
-  ),
+        leading: IconButton(
+          icon: Icon(Icons.refresh, color: Colors.white), // Иконка сброса
+          onPressed: _resetFilter, // Вызывает метод сброса
+        ),
 
         //////////////////////////////////////////////////////////////////////////////// actions - список кнопок в AppBar
         actions: [
@@ -1230,21 +800,19 @@ void _resetFilter() {
             icon: Icon(Icons.search, color: Colors.white),
             onPressed: () {
               // Открываем новое окно "Обзор" через push
-              //Navigator.push(
-                //context,
-                //MaterialPageRoute(
-                  //  builder: (context) =>
-                        //Overview()), // Здесь создаем новый маршрут
-              //);
+              // Navigator.push(
+              //   context,
+              //   MaterialPageRoute(
+              //       builder: (context) =>
+              //           Overview()), // Здесь создаем новый маршрут
+              // );
             },
           ),
 
           // Иконка для экспорта в PDF
           IconButton(
             icon: Icon(Icons.picture_as_pdf, color: Colors.white),
-            onPressed: () {
-              // Логика для экспорта в PDF будет добавлена позже
-            },
+            onPressed: generatePdf,
           ),
 
           // Иконка для экспорта в Excel
@@ -1254,7 +822,6 @@ void _resetFilter() {
               // Логика для экспорта в Excel будет добавлена позже
             },
           ),
-
 
           // Иконка для фильтрации по датам
           IconButton(
@@ -1267,6 +834,7 @@ void _resetFilter() {
 
       ////////////////////////////////////////// список динамических заголовков
       body: CustomScrollView(
+        controller: scrollController,
         slivers: [
           // 🔹 Динамический заголовок
           SliverAppBar(
@@ -1296,73 +864,75 @@ void _resetFilter() {
           _buildSectionTitle("По количеству транзакций"),
           SliverToBoxAdapter(
             child: Padding(
-    padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-    child: Text(
-      "График показывает количество операций покупки (синие столбцы) и продажи (красные столбцы) по разным валютам. Чем выше столбец - тем больше операций было совершено с данной валютой.",
-      style: TextStyle(color: Colors.white70, fontSize: 20),
-    ),
-  ),
-),
-SliverToBoxAdapter(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                "График показывает количество операций покупки (синие столбцы) и продажи (красные столбцы) по разным валютам. Чем выше столбец - тем больше операций было совершено с данной валютой.",
+                style: TextStyle(color: Colors.white70, fontSize: 20),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
             child: Container(
               height: 500,
               padding: EdgeInsets.all(16),
-              child: SfCartesianChart(
-                title: ChartTitle(text: 'Объем операций по валютам'),
-                primaryXAxis: CategoryAxis(
-                  title: AxisTitle(text: 'Валюта'),
-                  labelPlacement: LabelPlacement.betweenTicks,
-                ),
-                primaryYAxis: NumericAxis(
-                  title: AxisTitle(text: 'Количество'),
-                ),
-                series: <CartesianSeries>[
-                  ColumnSeries<CurrencyTransactionData, String>(
-                    name: 'Продажи',
-                    dataSource: data,
-                    xValueMapper: (data, _) => data.currency,
-                    yValueMapper: (data, _) => data.sellAmount,
-                    color: Colors.red,
-                    width: 0.5, // Ширина столбца
-                    spacing: 0.2, // Отступ между группами
+              child: RepaintBoundary(
+                key: _transactionVolumeChartKey,
+                child: SfCartesianChart(
+                  title: ChartTitle(text: 'Объем операций по валютам'),
+                  primaryXAxis: CategoryAxis(
+                    title: AxisTitle(text: 'Валюта'),
+                    labelPlacement: LabelPlacement.betweenTicks,
                   ),
-                  ColumnSeries<CurrencyTransactionData, String>(
-                    name: 'Покупки',
-                    dataSource: data,
-                    xValueMapper: (data, _) => data.currency,
-                    yValueMapper: (data, _) => data.buyAmount,
-                    color: Colors.blue,
-                    width: 0.5, // Ширина столбца
-                    spacing: 0.2, // Отступ между группами
+                  primaryYAxis: NumericAxis(
+                    title: AxisTitle(text: 'Количество'),
                   ),
-                ],
-                legend: Legend(
-                  isVisible: true,
-                  position: LegendPosition.bottom,
-                  textStyle: TextStyle(color: Colors.white),
-                ),
-                tooltipBehavior: TooltipBehavior(
-                  enable: true,
-                  header: '',
-                  format: 'point.x : point.y',
-                  textStyle: TextStyle(color: Colors.white),
+                  series: <CartesianSeries>[
+                    ColumnSeries<CurrencyTransactionData, String>(
+                      name: 'Продажи',
+                      dataSource: data,
+                      xValueMapper: (data, _) => data.currency,
+                      yValueMapper: (data, _) => data.sellAmount,
+                      color: Colors.red,
+                      width: 0.5, // Ширина столбца
+                      spacing: 0.2, // Отступ между группами
+                    ),
+                    ColumnSeries<CurrencyTransactionData, String>(
+                      name: 'Покупки',
+                      dataSource: data,
+                      xValueMapper: (data, _) => data.currency,
+                      yValueMapper: (data, _) => data.buyAmount,
+                      color: Colors.blue,
+                      width: 0.5, // Ширина столбца
+                      spacing: 0.2, // Отступ между группами
+                    ),
+                  ],
+                  legend: Legend(
+                    isVisible: true,
+                    position: LegendPosition.bottom,
+                    textStyle: TextStyle(color: Colors.white),
+                  ),
+                  tooltipBehavior: TooltipBehavior(
+                    enable: true,
+                    header: '',
+                    format: 'point.x : point.y',
+                    textStyle: TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
             ),
           ),
 
-
           // динамический столбчатый график по дням недели (с детализацией по часам каждый)
           _buildSectionTitle("По дням недели"),
           SliverToBoxAdapter(
-  child: Padding(
-    padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-    child: Text(
-      "На графике отображается активность операций по дням недели. Вы можете выбрать конкретный день, чтобы увидеть распределение транзакций по часам.",
-      style: TextStyle(color: Colors.white70, fontSize: 20),
-    ),
-  ),
-),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                "На графике отображается активность операций по дням недели. Вы можете выбрать конкретный день, чтобы увидеть распределение транзакций по часам.",
+                style: TextStyle(color: Colors.white70, fontSize: 20),
+              ),
+            ),
+          ),
 
           SliverToBoxAdapter(
             child: Column(
@@ -1401,36 +971,39 @@ SliverToBoxAdapter(
                   ),
                 ),
 
-                // сам столбчатый график, по дням или неделям  
+                // сам столбчатый график, по дням или неделям
                 Container(
-                  height: 500,
+                  height: 300,
                   padding: EdgeInsets.all(16),
-                  child: SfCartesianChart(
-                    title: ChartTitle(
-                        text: _showHours
-                            ? 'Транзакции по часам ($_selectedDay)'
-                            : 'Транзакции по дням недели'),
-                    primaryXAxis: CategoryAxis(
-                      title:
-                          AxisTitle(text: _showHours ? 'Часы' : 'Дни недели'),
-                    ),
-                    primaryYAxis: NumericAxis(
-                      title: AxisTitle(text: 'Количество транзакций'),
-                    ),
-                    series: <ColumnSeries<SalesData, String>>[
-                      ColumnSeries<SalesData, String>(
-                        dataSource: _showHours
-                            ? _prepareHourlyData(_selectedDay ?? 'Пн')
-                            : _prepareWeeklyData(),
-                        xValueMapper: (SalesData sales, _) => sales.category,
-                        yValueMapper: (SalesData sales, _) => sales.value,
-                        color: Colors.blue,
-                        width: _showHours ? 0.2 : 0.4,
+                  child: RepaintBoundary(
+                    key: _weeklyChartKey,
+                    child: SfCartesianChart(
+                      title: ChartTitle(
+                          text: _showHours
+                              ? 'Транзакции по часам ($_selectedDay)'
+                              : 'Транзакции по дням недели'),
+                      primaryXAxis: CategoryAxis(
+                        title:
+                            AxisTitle(text: _showHours ? 'Часы' : 'Дни недели'),
                       ),
-                    ],
-                    tooltipBehavior: TooltipBehavior(
-                      enable: true,
-                      format: 'point.x : point.y',
+                      primaryYAxis: NumericAxis(
+                        title: AxisTitle(text: 'Количество транзакций'),
+                      ),
+                      series: <ColumnSeries<SalesData, String>>[
+                        ColumnSeries<SalesData, String>(
+                          dataSource: _showHours
+                              ? _prepareHourlyData(_selectedDay ?? 'Пн')
+                              : _prepareWeeklyData(),
+                          xValueMapper: (SalesData sales, _) => sales.category,
+                          yValueMapper: (SalesData sales, _) => sales.value,
+                          color: Colors.blue,
+                          width: _showHours ? 0.2 : 0.4,
+                        ),
+                      ],
+                      tooltipBehavior: TooltipBehavior(
+                        enable: true,
+                        format: 'point.x : point.y',
+                      ),
                     ),
                   ),
                 ),
@@ -1438,22 +1011,21 @@ SliverToBoxAdapter(
             ),
           ),
 
-
           // секция с линейным графиком
           _buildSectionTitle("По динамике роста валюты"),
           SliverToBoxAdapter(
-  child: Padding(
-    padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-    child: Text(
-      "Линейный график демонстрирует изменение курса выбранной валюты за период. Вы можете сравнить динамику цен на покупку и продажу.",
-      style: TextStyle(color: Colors.white70, fontSize: 20),
-    ),
-  ),
-),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                "Линейный график демонстрирует изменение курса выбранной валюты за период. Вы можете сравнить динамику цен на покупку и продажу.",
+                style: TextStyle(color: Colors.white70, fontSize: 20),
+              ),
+            ),
+          ),
 
           SliverToBoxAdapter(
             child: Container(
-              height: 500,
+              height: 350,
               padding: EdgeInsets.all(16),
               child: Column(
                 children: [
@@ -1519,35 +1091,39 @@ SliverToBoxAdapter(
 
                   // График
                   Expanded(
-                    child: SfCartesianChart(
-                      title: ChartTitle(
-                        text:
-                            'Динамика курса $_selectedCurrency ($_selectedOperation)',
-                        textStyle: TextStyle(color: Colors.white),
-                      ),
-                      primaryXAxis: CategoryAxis(
-                        title: AxisTitle(text: 'Дата'),
-                        labelRotation: -45,
-                      ),
-                      primaryYAxis: NumericAxis(
-                        title: AxisTitle(text: 'Курс'),
-                      ),
-                      series: <LineSeries<SalesData, String>>[
-                        LineSeries<SalesData, String>(
-                          dataSource: _prepareCurrencyTrendData(),
-                          xValueMapper: (SalesData sales, _) => sales.category,
-                          yValueMapper: (SalesData sales, _) => sales.value,
-                          color: _selectedOperation == 'sell'
-                              ? Colors.red
-                              : Colors.blue,
-                          markerSettings: MarkerSettings(isVisible: true),
-                          animationDuration: 1000,
+                    child: RepaintBoundary(
+                      key: _currencyTrendChartKey,
+                      child: SfCartesianChart(
+                        title: ChartTitle(
+                          text:
+                              'Динамика курса $_selectedCurrency ($_selectedOperation)',
+                          textStyle: TextStyle(color: Colors.white),
                         ),
-                      ],
-                      tooltipBehavior: TooltipBehavior(
-                        enable: true,
-                        format: 'Дата: point.x\nКурс: point.y',
-                        textStyle: TextStyle(color: Colors.white),
+                        primaryXAxis: CategoryAxis(
+                          title: AxisTitle(text: 'Дата'),
+                          labelRotation: -45,
+                        ),
+                        primaryYAxis: NumericAxis(
+                          title: AxisTitle(text: 'Курс'),
+                        ),
+                        series: <LineSeries<SalesData, String>>[
+                          LineSeries<SalesData, String>(
+                            dataSource: _prepareCurrencyTrendData(),
+                            xValueMapper: (SalesData sales, _) =>
+                                sales.category,
+                            yValueMapper: (SalesData sales, _) => sales.value,
+                            color: _selectedOperation == 'sell'
+                                ? Colors.red
+                                : Colors.blue,
+                            markerSettings: MarkerSettings(isVisible: true),
+                            animationDuration: 1000,
+                          ),
+                        ],
+                        tooltipBehavior: TooltipBehavior(
+                          enable: true,
+                          format: 'Дата: point.x\nКурс: point.y',
+                          textStyle: TextStyle(color: Colors.white),
+                        ),
                       ),
                     ),
                   ),
@@ -1556,49 +1132,97 @@ SliverToBoxAdapter(
             ),
           ),
 
-
-          // круговой график по объему валют 
+          // круговой график по объему валют
           _buildSectionTitle("По объёму валюты"),
           SliverToBoxAdapter(
-  child: Padding(
-    padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-    child: Text(  
-      "Круговая диаграмма показывает распределение операций по валютам. Размер сегмента соответствует доле операций с каждой валютой.",
-      style: TextStyle(color: Colors.white70, fontSize: 20),
-    ),
-  ),
-),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                "Круговая диаграмма показывает распределение операций по валютам. Размер сегмента соответствует доле операций с каждой валютой.",
+                style: TextStyle(color: Colors.white70, fontSize: 20),
+              ),
+            ),
+          ),
 
           SliverToBoxAdapter(
             child: Container(
-              height: 500,
+              height: 300,
               padding: EdgeInsets.all(16),
-              child: SfCircularChart(
-                title: ChartTitle(text: 'Распределение по валютам'),
-                legend:
-                    Legend(isVisible: true, position: LegendPosition.bottom),
-                series: <PieSeries<SalesData, String>>[
-                  PieSeries<SalesData, String>(
-                    dataSource: currencyData,
-                    xValueMapper: (SalesData data, _) => data.country ?? '',
-                    yValueMapper: (SalesData data, _) => data.value,
-                    dataLabelMapper: (SalesData data, _) =>
-                        '${data.country}: ${data.value.toStringAsFixed(2)}',
-                    dataLabelSettings: DataLabelSettings(
-                      isVisible: true,
-                      labelPosition: ChartDataLabelPosition.inside,
-                      textStyle: TextStyle(color: Colors.white, fontSize: 16),
+              child: RepaintBoundary(
+                key: _pieChartKey,
+                child: SfCircularChart(
+                  title: ChartTitle(text: 'Распределение по валютам'),
+                  legend:
+                      Legend(isVisible: true, position: LegendPosition.bottom),
+                  series: <PieSeries<SalesData, String>>[
+                    PieSeries<SalesData, String>(
+                      dataSource: currencyData,
+                      xValueMapper: (SalesData data, _) => data.country ?? '',
+                      yValueMapper: (SalesData data, _) => data.value,
+                      dataLabelMapper: (SalesData data, _) =>
+                          '${data.country}: ${data.value.toStringAsFixed(2)}',
+                      dataLabelSettings: DataLabelSettings(
+                        isVisible: true,
+                        labelPosition: ChartDataLabelPosition.inside,
+                        textStyle: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                      radius: '70%',
+                      explode: true,
+                      explodeIndex: 0,
                     ),
-                    radius: '70%',
-                    explode: true,
-                    explodeIndex: 0,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ],
       ),
+
+      ///////////////////////////////////////////////////////////////////////////////////////// BottomNavigationBar - нижняя навигационная панель
+      // bottomNavigationBar: BottomNavigationBar(
+      //   backgroundColor: Colors.black,
+      //   type: BottomNavigationBarType.fixed,
+      //   selectedItemColor: Colors.blue,
+      //   unselectedItemColor: Colors.grey,
+      //   items: const [
+      //     BottomNavigationBarItem(
+      //       icon: Icon(Icons.currency_exchange),
+      //       label: 'Продажа/Покупка',
+      //     ),
+      //     BottomNavigationBarItem(
+      //       icon: Icon(Icons.history),
+      //       label: 'История',
+      //     ),
+      //     BottomNavigationBarItem(
+      //       icon: Icon(Icons.bar_chart),
+      //       label: 'Статистика',
+      //     ),
+      //     BottomNavigationBarItem(
+      //       icon: Icon(Icons.settings),
+      //       label: 'Настройки',
+      //     ),
+      //   ],
+      //   currentIndex:
+      //       2, // Текущий индекс - "История", так как мы на экране транзакций
+      //   onTap: (index) {
+      //     // Обработка нажатий на элементы навигации
+      //     switch (index) {
+      //       case 0:
+      //         // Переход на экран продажи/покупки
+      //         Navigator.pushReplacementNamed(context, '/home');
+      //         break;
+      //       case 1:
+      //         Navigator.pushReplacementNamed(context, '/event');
+      //         break;
+      //       case 2:
+      //         break;
+      //       case 3:
+      //         // Переход на экран настроек
+      //         Navigator.pushReplacementNamed(context, '/profile');
+      //         break;
+      //     }
+      //   },
+      // ),
     );
   }
 }

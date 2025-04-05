@@ -15,7 +15,7 @@ class _HomeState extends State<Home> {
 
   // Pages for each tab
   final List<Widget> _pages = [
-    const Center(child: Text('Продажа/Покупка', style: TextStyle(fontSize: 24))), // Продажа/Покупка
+    Center(child: Text('Продажа/Покупка', style: TextStyle(fontSize: 24))), // Продажа/Покупка
     const Event(), // История
     const Information(), // Статистика (полноценная страница)
     const SettingsHeaderScreen(), // Настройки
