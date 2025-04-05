@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:currencies/globals.dart' as globals;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CreatePinScreen extends StatefulWidget {
@@ -212,6 +215,40 @@ class _VerifyPinScreenState extends State<VerifyPinScreen> {
   List<String> _pin = [];
   String? _buttonPressed;
 
+  Future<void> remindPin() async {
+    final prefs = await SharedPreferences.getInstance();
+    final pin = prefs.getString('pin');
+    final userId = globals.user_id;
+
+    if (userId == null || pin == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ошибка: user_id или pin не найдены')),
+      );
+      return;
+    }
+
+    final response = await http.post(
+      Uri.parse('https://dair12.pythonanywhere.com/send-pin/'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'user_id': userId,
+        'pin': pin,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(data['message']), backgroundColor: Colors.blue),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(data['error'] ?? 'Ошибка'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
   void _addDigit(String digit) {
     if (_pin.length < 4) {
       setState(() {
@@ -339,6 +376,18 @@ class _VerifyPinScreenState extends State<VerifyPinScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children:
                       List.generate(4, (i) => _buildPinCircle(i, _pin.length)),
+                ),
+                const SizedBox(height: 12),
+                GestureDetector(
+                  onTap: remindPin,
+                  child: const Text(
+                    'Remind PIN code',
+                    style: TextStyle(
+                      color: Colors.blue,
+                      fontSize: 16,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
                 ),
               ],
             ),
