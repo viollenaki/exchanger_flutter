@@ -1,6 +1,9 @@
 import 'package:currencies/pages/pinCode.dart';
 import 'package:flutter/material.dart';
+import 'package:currencies/pages/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'package:currencies/theme/theme_provider.dart';
 
 void main() {
   runApp(const MaterialApp(
@@ -46,7 +49,12 @@ class _SettingsHeaderScreenState extends State<SettingsHeaderScreen> {
       {
         'icon': Icons.color_lens_outlined,
         'title': 'Тема',
-        'onTap': null,
+        'onTap': (BuildContext context) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const Settings()),
+          );
+        },
       },
       {
         'icon': Icons.pin,
@@ -57,7 +65,43 @@ class _SettingsHeaderScreenState extends State<SettingsHeaderScreen> {
         'icon': Icons.logout,
         'title': 'Выйти',
         'onTap': (BuildContext context) {
-          Navigator.pushReplacementNamed(context, '/');
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('Подтверждение'),
+                content: const Text('Вы уверены, что хотите выйти?'),
+                actions: [
+                  TextButton(
+                    child: const Text('Отмена'),
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Закрыть диалог
+                    },
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                    ),
+                    child: const Text('Выйти',
+                        style: TextStyle(color: Colors.white)),
+                    onPressed: () async {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.remove('pin');
+                      await prefs.remove('username');
+                      await prefs.remove('password');
+
+                      Navigator.of(context).pop(); // Закрыть диалог
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (context) => const Login()),
+                        (Route<dynamic> route) => false,
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
+          );
         },
       },
     ];
@@ -91,7 +135,8 @@ class _SettingsHeaderScreenState extends State<SettingsHeaderScreen> {
                             icon: const Icon(Icons.arrow_back,
                                 color: Colors.white),
                             onPressed: () {
-                              Navigator.pop(context); // Navigate back to the previous screen
+                              Navigator.pop(
+                                  context); // Navigate back to the previous screen
                             },
                           ),
                         ),
@@ -486,4 +531,42 @@ class WaveClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+}
+
+class Settings extends StatelessWidget {
+  const Settings({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Settings')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Select Theme', style: TextStyle(fontSize: 18)),
+            ListTile(
+              title: const Text('Light Theme'),
+              leading: Radio(
+                value: ThemeMode.light,
+                groupValue: themeProvider.themeMode,
+                onChanged: (value) => themeProvider.setThemeMode(value!),
+              ),
+            ),
+            ListTile(
+              title: const Text('Dark Theme'),
+              leading: Radio(
+                value: ThemeMode.dark,
+                groupValue: themeProvider.themeMode,
+                onChanged: (value) => themeProvider.setThemeMode(value!),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

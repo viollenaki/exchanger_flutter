@@ -1,0 +1,2 @@
+D:/RealProject/exchanger_flutter/android/app/.cxx/Debug/13632d5p/x86_64/CMakeFiles/edit_cache.dir
+D:/RealProject/exchanger_flutter/android/app/.cxx/Debug/13632d5p/x86_64/CMakeFiles/rebuild_cache.dir
