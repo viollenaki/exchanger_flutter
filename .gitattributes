@@ -1,0 +1,5 @@
+# Ensure all text files use LF
+* text=auto
+
+# macOS Flutter auto-generated file
+macos/Flutter/GeneratedPluginRegistrant.swift text eol=lf
