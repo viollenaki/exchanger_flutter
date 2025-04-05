@@ -34,6 +34,37 @@ class _SettingsHeaderScreenState extends State<SettingsHeaderScreen> {
     });
   }
 
+  Future<void> _handlePinToggle(bool newValue) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    if (newValue) {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => CreatePinScreen()),
+      );
+      if (result == true) {
+        setState(() {
+          isPinEnabled = prefs.containsKey('pin');
+        });
+      }
+    } else {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const VerifyPinScreen(
+            isForDisablingPin: true,
+          ),
+        ),
+      );
+      if (result == true) {
+        await prefs.remove('pin');
+        setState(() {
+          isPinEnabled = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> settingsItems = [
@@ -170,36 +201,7 @@ class _SettingsHeaderScreenState extends State<SettingsHeaderScreen> {
                           });
                         }
                         if (item['title'] == 'Пин-код') {
-                          return _buildPinToggle(isPinEnabled,
-                              (newValue) async {
-                            if (newValue) {
-                              final result = await Navigator.pushNamed(
-                                  context, '/createPin');
-                              if (result == true) {
-                                setState(() {
-                                  isPinEnabled = true;
-                                });
-                              }
-                            } else {
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const VerifyPinScreen(
-                                    isForDisablingPin: true,
-                                  ),
-                                ),
-                              );
-                              if (result == true) {
-                                final prefs =
-                                    await SharedPreferences.getInstance();
-                                await prefs.remove('pin');
-                                setState(() {
-                                  isPinEnabled = false;
-                                });
-                                debugPrint('PIN disabled');
-                              }
-                            }
-                          });
+                          return _buildPinToggle(isPinEnabled, _handlePinToggle);
                         }
                         return SettingsItem(
                           icon: item['icon'],
@@ -320,37 +322,9 @@ class _SettingsHeaderScreenState extends State<SettingsHeaderScreen> {
           ),
           Switch(
             value: isPinEnabled,
-            onChanged: (newValue) async {
-              if (newValue) {
-                // Enable PIN
-                final result = await Navigator.pushNamed(context, '/createPin');
-                if (result == true) {
-                  setState(() {
-                    isPinEnabled = true;
-                  });
-                }
-              } else {
-                // Disable PIN
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const VerifyPinScreen(
-                      isForDisablingPin: true,
-                    ),
-                  ),
-                );
-                if (result == true) {
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.remove('pin');
-                  setState(() {
-                    isPinEnabled = false;
-                  });
-                  debugPrint('PIN disabled');
-                }
-              }
-            },
+            onChanged: onChanged,
             activeColor: Colors.blueAccent,
-          ),
+          )
         ],
       ),
     );

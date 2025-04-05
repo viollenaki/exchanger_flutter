@@ -43,7 +43,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
       if (_pin.join() == _confirmPin.join()) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('pin', _pin.join());
-        Navigator.pop(context); // Return to settings
+        Navigator.pop(context,true); // Return to settings
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('PINs do not match')),
@@ -164,29 +164,27 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 48),
               child: Column(
                 children: [
+                  // Внутри build → Column → for (var row in ...) → Row(...)
+
                   for (var row in [
                     ['1', '2', '3'],
                     ['4', '5', '6'],
                     ['7', '8', '9'],
-                    ['<', '0', 'OK']
+                    ['<', '0', ''] // убрали OK, оставили пустое место
                   ])
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: row.map((item) {
                         if (item == '<') {
-                          return _buildKeyboardButton('', 28,
-                              icon: Icons.backspace_outlined);
-                        } else if (item == 'OK') {
-                          return GestureDetector(
-                            onTap: _submitPin,
-                            child: const Text(
-                              'OK',
-                              style: TextStyle(
-                                  fontSize: 28, color: Colors.blueAccent),
-                            ),
+                          return Expanded(
+                            child: _buildKeyboardButton('', 28, icon: Icons.backspace_outlined),
                           );
+                        } else if (item.isEmpty) {
+                          return const Expanded(child: SizedBox());
                         } else {
-                          return _buildKeyboardButton(item, 28);
+                          return Expanded(
+                            child: _buildKeyboardButton(item, 28),
+                          );
                         }
                       }).toList(),
                     ),
