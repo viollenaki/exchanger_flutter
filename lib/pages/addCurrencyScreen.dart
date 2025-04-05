@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+<<<<<<< HEAD
+=======
+import '../globals.dart'; // Import globals.dart
+>>>>>>> f00eaabb55a5d7ffeba19f4cd9ae312360220910
 
 void main() {
   runApp(const MaterialApp(home: AddCurrencyScreen()));
@@ -30,12 +34,19 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
   Future<void> _fetchUserInventory() async {
     try {
       const url = 'https://dair12.pythonanywhere.com/get_user_inventory/';
+<<<<<<< HEAD
       const userId = 12;
+=======
+>>>>>>> f00eaabb55a5d7ffeba19f4cd9ae312360220910
 
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
+<<<<<<< HEAD
         body: json.encode({'user_id': userId}),
+=======
+        body: json.encode({'user_id': user_id}), // Use global user_id
+>>>>>>> f00eaabb55a5d7ffeba19f4cd9ae312360220910
       );
 
       if (response.statusCode == 200) {
@@ -64,13 +75,20 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
 
     try {
       const url = 'https://dair12.pythonanywhere.com/add_currency/';
+<<<<<<< HEAD
       const userId = 12;
+=======
+>>>>>>> f00eaabb55a5d7ffeba19f4cd9ae312360220910
 
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
+<<<<<<< HEAD
           'user_id': userId,
+=======
+          'user_id': user_id, // Use global user_id
+>>>>>>> f00eaabb55a5d7ffeba19f4cd9ae312360220910
           'name': name,
           'code': code,
           'amount': amount,
@@ -96,13 +114,20 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
   Future<void> _deleteCurrency(int currencyId) async {
     try {
       const url = 'https://dair12.pythonanywhere.com/delete_currency/';
+<<<<<<< HEAD
       const userId = 12;
+=======
+>>>>>>> f00eaabb55a5d7ffeba19f4cd9ae312360220910
 
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
+<<<<<<< HEAD
           'user_id': userId,
+=======
+          'user_id': user_id, // Use global user_id
+>>>>>>> f00eaabb55a5d7ffeba19f4cd9ae312360220910
           'currency_id': currencyId,
         }),
       );
@@ -118,13 +143,20 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
   Future<void> _updateAmount(int currencyId, double amount) async {
     try {
       const url = 'https://dair12.pythonanywhere.com/add_inventory_amount/';
+<<<<<<< HEAD
       const userId = 12;
+=======
+>>>>>>> f00eaabb55a5d7ffeba19f4cd9ae312360220910
 
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
+<<<<<<< HEAD
           'user_id': userId,
+=======
+          'user_id': user_id, // Use global user_id
+>>>>>>> f00eaabb55a5d7ffeba19f4cd9ae312360220910
           'currency_id': currencyId,
           'amount': amount,
         }),
@@ -218,6 +250,7 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
               ),
               const SizedBox(height: 20),
               TextField(
+<<<<<<< HEAD
   controller: _codeController,
   decoration: InputDecoration(
     labelText: 'Код валюты (3 буквы)',
@@ -239,6 +272,30 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
     }
   },
 ),
+=======
+                controller: _codeController,
+                decoration: InputDecoration(
+                  labelText: 'Код валюты (3 буквы)',
+                  border: const OutlineInputBorder(),
+                  errorText: _codeController.text.isNotEmpty &&
+                          _codeController.text.length != 3
+                      ? 'Код должен содержать 3 символа'
+                      : null,
+                ),
+                maxLength: 3,
+                textCapitalization: TextCapitalization.characters,
+                onChanged: (value) {
+                  final newValue = value.toUpperCase();
+                  if (newValue != value) {
+                    _codeController.value = _codeController.value.copyWith(
+                      text: newValue,
+                      selection:
+                          TextSelection.collapsed(offset: newValue.length),
+                    );
+                  }
+                },
+              ),
+>>>>>>> f00eaabb55a5d7ffeba19f4cd9ae312360220910
               const SizedBox(height: 20),
               TextField(
                 controller: _amountController,
@@ -262,7 +319,11 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
                       : const Text('Добавить валюту'),
                 ),
               ),
+<<<<<<< HEAD
               
+=======
+
+>>>>>>> f00eaabb55a5d7ffeba19f4cd9ae312360220910
               // Заголовок и список валют
               const Padding(
                 padding: EdgeInsets.only(top: 30, bottom: 15),
@@ -302,6 +363,7 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
                                   const Icon(Icons.delete, color: Colors.white),
                             ),
                             confirmDismiss: (direction) async {
+<<<<<<< HEAD
   return await showDialog(
     context: context,
     builder: (context) => AlertDialog(
@@ -343,6 +405,54 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
     ),
   );
 },
+=======
+                              return await showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text(
+                                    'Удалить валюту?',
+                                    style: TextStyle(
+                                      // Увеличенный шрифт
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  content: const Text(
+                                    'Вы уверены что хотите удалить эту валюту?',
+                                    style: TextStyle(
+                                      // Увеличенный шрифт
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(context, false),
+                                      child: const Text(
+                                        'Отмена',
+                                        style: TextStyle(
+                                            fontSize: 16), // Стандартный размер
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        _deleteCurrency(
+                                            currency['currency_id']);
+                                        Navigator.pop(context, true);
+                                      },
+                                      child: const Text(
+                                        'Удалить',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.red,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+>>>>>>> f00eaabb55a5d7ffeba19f4cd9ae312360220910
                             child: ListTile(
                               title: Text(
                                 currency['currency'],
@@ -353,12 +463,21 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
                                 ),
                               ),
                               subtitle: Text(
+<<<<<<< HEAD
   '${currency['quantity']} ${currency['currency_code'].toString().toUpperCase()}',
   style: const TextStyle(
     fontSize: 16,
     color: Colors.black87,
   ),
 ),
+=======
+                                '${currency['quantity']} ${currency['currency_code'].toString().toUpperCase()}',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.black87,
+                                ),
+                              ),
+>>>>>>> f00eaabb55a5d7ffeba19f4cd9ae312360220910
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [

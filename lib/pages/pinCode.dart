@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CreatePinScreen extends StatefulWidget {
@@ -13,6 +15,32 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
   final List<String> _confirmPin = [];
   bool _isConfirming = false;
   String? _buttonPressed;
+
+  Future<void> sendPin(String email, String pin) async {
+    final url = Uri.parse('https://dair12.pythonanywhere.com/send_pin_view/');
+
+    final headers = {
+      'Content-Type': 'application/json',
+    };
+
+    final body = jsonEncode({
+      'email': email,
+      'pin': pin,
+    });
+
+    try {
+      final response = await http.post(url, headers: headers, body: body);
+
+      if (response.statusCode == 200) {
+        print('Email sent successfully!');
+      } else {
+        print('Failed to send email. Code: ${response.statusCode}');
+        print('Response: ${response.body}');
+      }
+    } catch (e) {
+      print('Error sending request: $e');
+    }
+  }
 
   void _addDigit(String digit) {
     setState(() {
@@ -45,7 +73,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
       if (_pin.join() == _confirmPin.join()) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('pin', _pin.join());
-        Navigator.pop(context); // Return to settings
+        Navigator.pop(context,true); // Return to settings
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('PINs do not match')),
@@ -166,29 +194,27 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 48),
               child: Column(
                 children: [
+                  // Внутри build → Column → for (var row in ...) → Row(...)
+
                   for (var row in [
                     ['1', '2', '3'],
                     ['4', '5', '6'],
                     ['7', '8', '9'],
-                    ['<', '0', 'OK']
+                    ['<', '0', ''] // убрали OK, оставили пустое место
                   ])
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: row.map((item) {
                         if (item == '<') {
-                          return _buildKeyboardButton('', 28,
-                              icon: Icons.backspace_outlined);
-                        } else if (item == 'OK') {
-                          return GestureDetector(
-                            onTap: _submitPin,
-                            child: const Text(
-                              'OK',
-                              style: TextStyle(
-                                  fontSize: 28, color: Colors.blueAccent),
-                            ),
+                          return Expanded(
+                            child: _buildKeyboardButton('', 28, icon: Icons.backspace_outlined),
                           );
+                        } else if (item.isEmpty) {
+                          return const Expanded(child: SizedBox());
                         } else {
-                          return _buildKeyboardButton(item, 28);
+                          return Expanded(
+                            child: _buildKeyboardButton(item, 28),
+                          );
                         }
                       }).toList(),
                     ),
