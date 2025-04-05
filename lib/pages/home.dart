@@ -3,13 +3,7 @@ import 'package:currencies/pages/addCurency.dart';
 import 'package:flutter/material.dart';
 import 'eventHistory.dart'; // Import the HistoryPage
 import 'package:currencies/widgets/custom_drawer.dart';
-
-void main() {
-  runApp(const MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: Home(),
-  ));
-}
+import 'information.dart'; // Import the Information page
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -44,7 +38,7 @@ class _HomeState extends State<Home> {
     pages = [
       _buildBuySellPage(), // "Продажа/Покупка" tab
       const Event(), // История opens Event (from eventHistory.dart)
-      const Center(child: Text('Статистика', style: TextStyle(fontSize: 24))),
+      const Information(), // Use the actual Information page for Statistics tab
       const SettingsHeaderScreen(),
     ];
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'eventHistory.dart'; // Import the Event (HistoryPage)
 import 'settings.dart'; // Import the SettingsHeaderScreen
+import 'information.dart'; // Добавьте импорт страницы статистики
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -15,9 +16,9 @@ class _HomeState extends State<Home> {
   // Pages for each tab
   final List<Widget> _pages = [
     const Center(child: Text('Продажа/Покупка', style: TextStyle(fontSize: 24))), // Продажа/Покупка
-    const Event(), // История opens Event (from eventHistory.dart)
-    const Center(child: Text('Статистика', style: TextStyle(fontSize: 24))), // Статистика
-    const SettingsHeaderScreen(), // Настройки opens SettingsHeaderScreen (from settings.dart)
+    const Event(), // История
+    const Information(), // Статистика (полноценная страница)
+    const SettingsHeaderScreen(), // Настройки
   ];
 
   @override
