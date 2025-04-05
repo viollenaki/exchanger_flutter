@@ -1,14 +1,9 @@
 import 'package:currencies/pages/settings.dart';
-import 'package:currencies/pages/userProfile.dart';
+import 'package:currencies/pages/addCurency.dart';
 import 'package:flutter/material.dart';
 import 'eventHistory.dart'; // Import the HistoryPage
-
-void main() {
-  runApp(const MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: Home(),
-  ));
-}
+import 'package:currencies/widgets/custom_drawer.dart';
+import 'information.dart'; // Import the Information page
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -43,7 +38,7 @@ class _HomeState extends State<Home> {
     pages = [
       _buildBuySellPage(), // "Продажа/Покупка" tab
       const Event(), // История opens Event (from eventHistory.dart)
-      const Center(child: Text('Статистика', style: TextStyle(fontSize: 24))),
+      const Information(), // Use the actual Information page for Statistics tab
       const SettingsHeaderScreen(),
     ];
   }
@@ -51,6 +46,7 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: CustomDrawer(drawerHeaderColor: warmBlue), // Используем CustomDrawer
       body: Stack(
         children: [
           pages[_currentIndex], // Display the selected page
@@ -58,18 +54,16 @@ class _HomeState extends State<Home> {
             Positioned(
               top: 48,
               left: 16,
-              child: GestureDetector(
-                onTap: () {
-                  // Действие при нажатии на иконку профиля
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const UserProfile()),
-                  );
-                },
-                child: const Icon(
-                  Icons.account_circle,
-                  size: 32,
-                  color: Colors.black54, // Цвет иконки
+              child: Builder(
+                builder: (context) => GestureDetector(
+                  onTap: () {
+                    Scaffold.of(context).openDrawer(); // Открыть Drawer
+                  },
+                  child: const Icon(
+                    Icons.menu,
+                    size: 35,
+                    color: Color.fromARGB(255, 255, 255, 255), // Цвет иконки
+                  ),
                 ),
               ),
             ),
@@ -109,92 +103,95 @@ class _HomeState extends State<Home> {
 
   // "Продажа/Покупка" tab content
   Widget _buildBuySellPage() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            warmBlue,
-            softBeige,
-          ],
-        ),
-      ),
-      child: Center(
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(30),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // "Купить" and "Продать" buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _toggleButton(
-                    "Купить",
-                    isBuySelected, // Active when `isBuySelected` is true
-                    () {
-                      setState(() {
-                        isBuySelected = true; // Set to "Купить"
-                      });
-                    },
-                    brightGreen, // Green color for "Купить"
-                  ),
-                  _toggleButton(
-                    "Продать",
-                    !isBuySelected, // Active when `isBuySelected` is false
-                    () {
-                      setState(() {
-                        isBuySelected = false; // Set to "Продать"
-                      });
-                    },
-                    brightRed, // Red color for "Продать"
-                  ),
-                ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Column(
+          children: [
+            // Top part with the blue-colored photo
+            SizedBox(
+              height: constraints.maxHeight * 0.20, // Adjust the height to 20% of the available height
+              width: double.infinity, // Ensure the image takes the full width
+              child: Image.asset(
+                'assets/background.jpg', // Ensure the path to the image is correct
+                fit: BoxFit.cover, // Ensures the image covers the entire area
               ),
-              const SizedBox(height: 20),
-
-              // Currency dropdown
-              _buildDropdown(),
-
-              const SizedBox(height: 16),
-              _inputField(controller: quantityController, hint: 'Amount'),
-              const SizedBox(height: 16),
-              _inputField(controller: courseController, hint: 'Exchange Rate'),
-              const SizedBox(height: 16),
-              _inputField(controller: descriptionController, hint: 'Description'),
-              const SizedBox(height: 24),
-
-              // Add Event button
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: warmBlue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'Add Event',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
+            ),
+            // Bottom part with the content
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9), // Slightly transparent background
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
                   ),
                 ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // "Купить" and "Продать" buttons
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _toggleButton(
+                          "Купить",
+                          isBuySelected,
+                          () {
+                            setState(() {
+                              isBuySelected = true;
+                            });
+                          },
+                          brightGreen,
+                        ),
+                        _toggleButton(
+                          "Продать",
+                          !isBuySelected,
+                          () {
+                            setState(() {
+                              isBuySelected = false;
+                            });
+                          },
+                          brightRed,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    _buildDropdown(),
+                    const SizedBox(height: 16),
+                    _inputField(controller: quantityController, hint: 'Amount'),
+                    const SizedBox(height: 16),
+                    _inputField(controller: courseController, hint: 'Exchange Rate'),
+                    const SizedBox(height: 16),
+                    _inputField(controller: descriptionController, hint: 'Description'),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: () {},
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: warmBlue,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Add Event',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
+          ],
+        );
+      },
     );
   }
 

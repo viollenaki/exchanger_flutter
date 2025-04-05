@@ -17,20 +17,24 @@ class _LoginState extends State<Login> {
   String? _errorMessage;
   String? _successMessage;
   // Login
-  final TextEditingController _loginUsernameController = TextEditingController();
-  final TextEditingController _loginPasswordController = TextEditingController();
+  final TextEditingController _loginUsernameController =
+      TextEditingController();
+  final TextEditingController _loginPasswordController =
+      TextEditingController();
 
 // Register
   final TextEditingController _regUsernameController = TextEditingController();
   final TextEditingController _regEmailController = TextEditingController();
   final TextEditingController _regPasswordController = TextEditingController();
-  final TextEditingController _regConfirmPasswordController = TextEditingController();
+  final TextEditingController _regConfirmPasswordController =
+      TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _checkSavedCredentials(); // Check for saved credentials on app launch
   }
+
   Future<void> _sendResetPasswordRequest(String email) async {
     if (email.isEmpty) {
       setState(() {
@@ -39,7 +43,8 @@ class _LoginState extends State<Login> {
       return;
     }
 
-    final url = Uri.parse("https://dair12.pythonanywhere.com/request_password_reset/");
+    final url =
+        Uri.parse("https://dair12.pythonanywhere.com/request_password_reset/");
     try {
       final response = await http.post(
         url,
@@ -133,7 +138,8 @@ class _LoginState extends State<Login> {
     }
   }
 
-  Future<void> _loginUser(String username, String password, {bool autoLogin = false}) async {
+  Future<void> _loginUser(String username, String password,
+      {bool autoLogin = false}) async {
     if (!autoLogin) {
       if (username.isEmpty || password.isEmpty) {
         setState(() {
@@ -214,10 +220,10 @@ class _LoginState extends State<Login> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          setState((){
-              _tabIndex = index; // Обновление текущего индекса вкладки
-              _errorMessage = null;
-              _successMessage = null;
+          setState(() {
+            _tabIndex = index; // Обновление текущего индекса вкладки
+            _errorMessage = null;
+            _successMessage = null;
           });
           _pageController.animateToPage(
             index,
@@ -258,16 +264,17 @@ class _LoginState extends State<Login> {
   // Виджет для текстового поля ввода
   Widget _buildTextInput(IconData icon, String hint,
       {bool obscure = false, TextEditingController? controller}) {
+    final theme = Theme.of(context); // Access current theme
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: TextField(
         controller: controller, // Контроллер для получения текста
         obscureText: obscure, // Скрытие текста (например, для пароля)
         decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: Colors.blue), // Иконка перед текстом
+          prefixIcon: Icon(icon, color: theme.primaryColor), // Use theme color
           hintText: hint, // Подсказка
           filled: true,
-          fillColor: Colors.grey[200],
+          fillColor: theme.inputDecorationTheme.fillColor, // Use theme color
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide.none,
@@ -283,7 +290,8 @@ class _LoginState extends State<Login> {
     final usernameController = _loginUsernameController;
     final passwordController = _loginPasswordController;
 
-    return SingleChildScrollView( child:Padding(
+    return SingleChildScrollView(
+        child: Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
@@ -320,7 +328,6 @@ class _LoginState extends State<Login> {
             onPressed: () => _loginUser(usernameController.text.trim(),
                 passwordController.text.trim()), // Вызов функции входа
             child: const Text("Login", style: TextStyle(color: Colors.white)),
-
           ),
           TextButton(
             onPressed: () => _showResetPasswordDialog(),
@@ -348,7 +355,10 @@ class _LoginState extends State<Login> {
       final String password = passwordController.text.trim();
       final String confirmPassword = confirmPasswordController.text.trim();
 
-      if (username.isEmpty || email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+      if (username.isEmpty ||
+          email.isEmpty ||
+          password.isEmpty ||
+          confirmPassword.isEmpty) {
         setState(() {
           _errorMessage = 'Please fill in all fields';
         });
@@ -384,7 +394,9 @@ class _LoginState extends State<Login> {
 
           // Можно показать SnackBar об успехе или перейти во вкладку логина
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Registration successful: ${responseData['message']}')),
+            SnackBar(
+                content: Text(
+                    'Registration successful: ${responseData['message']}')),
           );
 
           // Переключиться на логин-вкладку:
@@ -401,15 +413,18 @@ class _LoginState extends State<Login> {
       }
     }
 
-    return SingleChildScrollView(child: Padding(
+    return SingleChildScrollView(
+        child: Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          _buildTextInput(Icons.person, "Username", controller: usernameController),
+          _buildTextInput(Icons.person, "Username",
+              controller: usernameController),
           _buildTextInput(Icons.email, "Email", controller: emailController),
-          _buildTextInput(Icons.lock, "Password", obscure: true, controller: passwordController),
-          _buildTextInput(Icons.lock_outline, "Confirm Password", obscure: true, controller: confirmPasswordController),
-
+          _buildTextInput(Icons.lock, "Password",
+              obscure: true, controller: passwordController),
+          _buildTextInput(Icons.lock_outline, "Confirm Password",
+              obscure: true, controller: confirmPasswordController),
           if (_errorMessage != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
@@ -418,7 +433,6 @@ class _LoginState extends State<Login> {
                 style: const TextStyle(color: Colors.red, fontSize: 14),
               ),
             ),
-
           const SizedBox(height: 10),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -429,16 +443,20 @@ class _LoginState extends State<Login> {
               ),
             ),
             onPressed: _registerUser,
-            child: const Text("Register", style: TextStyle(color: Colors.white)),
+            child:
+                const Text("Register", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     ));
   }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Access current theme
     return Scaffold(
-      backgroundColor: const Color(0xFF0D47A1), // Синий фон
+      backgroundColor:
+          theme.scaffoldBackgroundColor, // Use scaffoldBackgroundColor
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {

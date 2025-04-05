@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:currencies/pages/home.dart';
 import 'package:currencies/pages/login.dart';
 import 'package:currencies/pages/pinCode.dart';
+import 'package:currencies/pages/settings.dart'; // Import Settings page
+import 'package:currencies/theme/theme_provider.dart'; // Import ThemeProvider
+import 'package:provider/provider.dart'; // For state management
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
@@ -26,16 +29,25 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: isUserLoggedIn
-          ? (storedPin == null ? const Home() : VerifyPinScreen())
-          : const Login(),
-      routes: {
-        '/home': (context) => const Home(),
-        '/createPin': (context) => CreatePinScreen(),
-        '/verifyPin': (context) => VerifyPinScreen(),
-      },
+    return ChangeNotifierProvider(
+      create: (_) => ThemeProvider(), // Provide ThemeProvider
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: themeProvider.currentTheme, // Apply dynamic theme
+            home: isUserLoggedIn
+                ? (storedPin == null ? const Home() : VerifyPinScreen())
+                : const Login(),
+            routes: {
+              '/home': (context) => const Home(),
+              '/createPin': (context) => CreatePinScreen(),
+              '/verifyPin': (context) => VerifyPinScreen(),
+              '/settings': (context) => const Settings(), // Add Settings route
+            },
+          );
+        },
+      ),
     );
   }
 }

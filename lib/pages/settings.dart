@@ -2,6 +2,8 @@ import 'package:currencies/pages/pinCode.dart';
 import 'package:flutter/material.dart';
 import 'package:currencies/pages/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'package:currencies/theme/theme_provider.dart';
 
 void main() {
   runApp(const MaterialApp(
@@ -78,7 +80,12 @@ class _SettingsHeaderScreenState extends State<SettingsHeaderScreen> {
       {
         'icon': Icons.color_lens_outlined,
         'title': 'Тема',
-        'onTap': null,
+        'onTap': (BuildContext context) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const Settings()),
+          );
+        },
       },
       {
         'icon': Icons.pin,
@@ -106,7 +113,8 @@ class _SettingsHeaderScreenState extends State<SettingsHeaderScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.redAccent,
                     ),
-                    child: const Text('Выйти', style: TextStyle(color: Colors.white)),
+                    child: const Text('Выйти',
+                        style: TextStyle(color: Colors.white)),
                     onPressed: () async {
                       final prefs = await SharedPreferences.getInstance();
                       await prefs.remove('pin');
@@ -117,7 +125,7 @@ class _SettingsHeaderScreenState extends State<SettingsHeaderScreen> {
                       Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(builder: (context) => const Login()),
-                            (Route<dynamic> route) => false,
+                        (Route<dynamic> route) => false,
                       );
                     },
                   ),
@@ -150,6 +158,7 @@ class _SettingsHeaderScreenState extends State<SettingsHeaderScreen> {
                   child: SafeArea(
                     child: Stack(
                       children: [
+                        // Back button
                         Positioned(
                           left: 16,
                           top: 16,
@@ -157,10 +166,12 @@ class _SettingsHeaderScreenState extends State<SettingsHeaderScreen> {
                             icon: const Icon(Icons.arrow_back,
                                 color: Colors.white),
                             onPressed: () {
-                              Navigator.pop(context);
+                              Navigator.pop(
+                                  context); // Navigate back to the previous screen
                             },
                           ),
                         ),
+                        // Title
                         Align(
                           alignment: Alignment.topCenter,
                           child: Padding(
@@ -201,7 +212,8 @@ class _SettingsHeaderScreenState extends State<SettingsHeaderScreen> {
                           });
                         }
                         if (item['title'] == 'Пин-код') {
-                          return _buildPinToggle(isPinEnabled, _handlePinToggle);
+                          return _buildPinToggle(
+                              isPinEnabled, _handlePinToggle);
                         }
                         return SettingsItem(
                           icon: item['icon'],
@@ -494,4 +506,16 @@ class WaveClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+}
+
+class Settings extends StatelessWidget {
+  const Settings({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Settings')),
+      body: const Center(child: Text('Settings Page')),
+    );
+  }
 }
