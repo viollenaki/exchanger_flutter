@@ -140,7 +140,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  _isConfirming ? 'Подтвердите пин-код' : 'Создайте пин-код',
+                  _isConfirming ? 'Подтвер пин-код' : 'Создайте пин-код',
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
