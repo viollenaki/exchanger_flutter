@@ -15,6 +15,16 @@ class _LoginState extends State<Login> {
       PageController(); // Контроллер для переключения страниц
   int _tabIndex = 0; // Индекс текущей вкладки (Login или Register)
   String? _errorMessage;
+  String? _successMessage;
+  // Login
+  final TextEditingController _loginUsernameController = TextEditingController();
+  final TextEditingController _loginPasswordController = TextEditingController();
+
+// Register
+  final TextEditingController _regUsernameController = TextEditingController();
+  final TextEditingController _regEmailController = TextEditingController();
+  final TextEditingController _regPasswordController = TextEditingController();
+  final TextEditingController _regConfirmPasswordController = TextEditingController();
 
   @override
   void initState() {
@@ -42,6 +52,7 @@ class _LoginState extends State<Login> {
       if (response.statusCode == 200) {
         setState(() {
           _errorMessage = null;
+          _successMessage = responseData['message'];
         });
 
         // Показать синее сообщение
@@ -150,6 +161,7 @@ class _LoginState extends State<Login> {
           // Успешный вход
           setState(() {
             _errorMessage = null;
+            _successMessage = null;
           });
 
           final prefs = await SharedPreferences.getInstance();
@@ -204,7 +216,9 @@ class _LoginState extends State<Login> {
         onTap: () {
           setState((){
               _tabIndex = index; // Обновление текущего индекса вкладки
-              _errorMessage = null; });
+              _errorMessage = null;
+              _successMessage = null;
+          });
           _pageController.animateToPage(
             index,
             duration: const Duration(milliseconds: 400),
@@ -265,10 +279,11 @@ class _LoginState extends State<Login> {
 
   // Форма для входа
   Widget _buildLoginForm() {
-    final TextEditingController usernameController = TextEditingController();
-    final TextEditingController passwordController = TextEditingController();
+    // используй контроллеры из state:
+    final usernameController = _loginUsernameController;
+    final passwordController = _loginPasswordController;
 
-    return Padding(
+    return SingleChildScrollView( child:Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
@@ -277,6 +292,14 @@ class _LoginState extends State<Login> {
           _buildTextInput(Icons.lock, "Password",
               obscure: true,
               controller: passwordController), // Поле ввода пароля
+          if (_successMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: Text(
+                _successMessage!,
+                style: const TextStyle(color: Colors.blueAccent, fontSize: 14),
+              ),
+            ),
           if (_errorMessage != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
@@ -308,15 +331,15 @@ class _LoginState extends State<Login> {
           ),
         ],
       ),
-    );
+    ));
   }
 
   // Форма для регистрации
   Widget _buildRegisterForm() {
-    final TextEditingController usernameController = TextEditingController();
-    final TextEditingController emailController = TextEditingController();
-    final TextEditingController passwordController = TextEditingController();
-    final TextEditingController confirmPasswordController = TextEditingController();
+    final usernameController = _regUsernameController;
+    final emailController = _regEmailController;
+    final passwordController = _regPasswordController;
+    final confirmPasswordController = _regConfirmPasswordController;
 
     // Функция для регистрации пользователя
     Future<void> _registerUser() async {
@@ -356,6 +379,7 @@ class _LoginState extends State<Login> {
         if (response.statusCode == 200) {
           setState(() {
             _errorMessage = null;
+            _successMessage = responseData['message'];
           });
 
           // Можно показать SnackBar об успехе или перейти во вкладку логина
@@ -377,7 +401,7 @@ class _LoginState extends State<Login> {
       }
     }
 
-    return Padding(
+    return SingleChildScrollView(child: Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
@@ -409,7 +433,7 @@ class _LoginState extends State<Login> {
           ),
         ],
       ),
-    );
+    ));
   }
   @override
   Widget build(BuildContext context) {
@@ -468,8 +492,13 @@ class _LoginState extends State<Login> {
                                       Expanded(
                                         child: PageView(
                                           controller: _pageController,
-                                          onPageChanged: (index) =>
-                                              setState(() => _tabIndex = index),
+                                          onPageChanged: (index) {
+                                            setState(() {
+                                              _tabIndex = index;
+                                              _errorMessage = null;
+                                              _successMessage = null;
+                                            });
+                                          },
                                           children: [
                                             _buildLoginForm(), // Форма логина
                                             _buildRegisterForm(), // Форма регистрации
