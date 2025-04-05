@@ -1,5 +1,6 @@
 import 'package:currencies/pages/pinCode.dart';
 import 'package:flutter/material.dart';
+import 'package:currencies/pages/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -57,7 +58,42 @@ class _SettingsHeaderScreenState extends State<SettingsHeaderScreen> {
         'icon': Icons.logout,
         'title': 'Выйти',
         'onTap': (BuildContext context) {
-          Navigator.pushReplacementNamed(context, '/');
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('Подтверждение'),
+                content: const Text('Вы уверены, что хотите выйти?'),
+                actions: [
+                  TextButton(
+                    child: const Text('Отмена'),
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Закрыть диалог
+                    },
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                    ),
+                    child: const Text('Выйти', style: TextStyle(color: Colors.white)),
+                    onPressed: () async {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.remove('pin');
+                      await prefs.remove('username');
+                      await prefs.remove('password');
+
+                      Navigator.of(context).pop(); // Закрыть диалог
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (context) => const Login()),
+                            (Route<dynamic> route) => false,
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
+          );
         },
       },
     ];
