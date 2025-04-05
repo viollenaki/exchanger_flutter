@@ -80,7 +80,7 @@ class _LoginState extends State<Login> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Failed to connect to server: $e';
+        _errorMessage = 'Failed to connect to s: $e';
       });
     }
   }
