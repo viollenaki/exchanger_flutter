@@ -84,7 +84,7 @@ class _InformationState extends State<Information> {
       helpText: '', // Убираем карандаш (поле ввода даты)
       builder: (context, child) {
         return Theme(
-          data: ThemeData.dark(),
+          data: ThemeData.light(), // Changed from ThemeData.dark()
           child: child!,
         );
       },
@@ -1147,7 +1147,7 @@ class _InformationState extends State<Information> {
         child: Text(
           title,
           style: TextStyle(
-              fontSize: 27, fontWeight: FontWeight.bold, color: Colors.white),
+              fontSize: 27, fontWeight: FontWeight.bold, color: Colors.black), // Changed from white
         ),
       ),
     );
@@ -1210,10 +1210,10 @@ void _resetFilter() {
 
     /////////////////////////////////////////////////////////////////////////////////////////////////// Scaffold - основная структура экрана
     return Scaffold(
-      backgroundColor: Colors.black87,
+      backgroundColor: Colors.white, // Changed from Colors.black87
       /////////////////////////////////////////////////////////////////////////////////////////// AppBar - верхняя панель
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: Colors.blue, // Changed from Colors.black
         title: const Text('Statistics', style: TextStyle(color: Colors.white)),
         centerTitle: true,
 
@@ -1271,23 +1271,37 @@ void _resetFilter() {
           // 🔹 Динамический заголовок
           SliverAppBar(
             expandedHeight: 100.0,
-            pinned: true,
+
+            pinned: false,
             flexibleSpace: FlexibleSpaceBar(
               title: Column(
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                      "Прибыль в Сомах: ${calculateTransactionSum(_filteredTransactions)}"),
-                  if (_selectedDateRange != null)
                     Text(
-                      "Период: ${DateFormat('dd.MM.yyyy').format(_selectedDateRange!.start)} - ${DateFormat('dd.MM.yyyy').format(_selectedDateRange!.end)}",
-                      style: TextStyle(fontSize: 14),
-                    ),
+  "Прибыль в Сомах: ${calculateTransactionSum(_filteredTransactions)}",
+  style: TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.bold, 
+    color: Colors.black,
+
+    
+  ),
+),
+if (_selectedDateRange != null)
+  Text(
+    "Период: ${DateFormat('dd.MM.yyyy').format(_selectedDateRange!.start)} - ${DateFormat('dd.MM.yyyy').format(_selectedDateRange!.end)}",
+    style: TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.bold,
+      color: Colors.black,
+      
+    ),
+  ),
                 ],
               ),
               background: Container(
-                color: Colors.blueGrey,
+                color: const Color.fromARGB(255, 255, 255, 255),
               ),
             ),
           ),
@@ -1295,14 +1309,14 @@ void _resetFilter() {
           //  график "По количеству транзакций", где синие - покупки, красные - продажи
           _buildSectionTitle("По количеству транзакций"),
           SliverToBoxAdapter(
-            child: Padding(
-    padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-    child: Text(
-      "График показывает количество операций покупки (синие столбцы) и продажи (красные столбцы) по разным валютам. Чем выше столбец - тем больше операций было совершено с данной валютой.",
-      style: TextStyle(color: Colors.white70, fontSize: 20),
+    child: Padding(
+      padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Text(
+        "График показывает количество операций покупки (синие столбцы) и продажи (красные столбцы) по разным валютам. Чем выше столбец - тем больше операций было совершено с данной валютой.",
+        style: TextStyle(color: Colors.black54, fontSize: 20), // Changed from white70
+      ),
     ),
   ),
-),
 SliverToBoxAdapter(
             child: Container(
               height: 500,
@@ -1359,7 +1373,7 @@ SliverToBoxAdapter(
     padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
     child: Text(
       "На графике отображается активность операций по дням недели. Вы можете выбрать конкретный день, чтобы увидеть распределение транзакций по часам.",
-      style: TextStyle(color: Colors.white70, fontSize: 20),
+      style: TextStyle(color: Colors.black54, fontSize: 20),
     ),
   ),
 ),
@@ -1369,37 +1383,36 @@ SliverToBoxAdapter(
               children: [
                 // Кнопки дней недели
                 SizedBox(
-                  height: 50,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children:
-                        ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((day) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                _selectedDay == day ? Colors.blue : Colors.grey,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              if (_selectedDay == day && _showHours) {
-                                // Если уже показываем часы этого дня - возвращаем дни недели
-                                _showHours = false;
-                                _selectedDay = null;
-                              } else {
-                                // Иначе показываем часы выбранного дня
-                                _showHours = true;
-                                _selectedDay = day;
-                              }
-                            });
-                          },
-                          child: Text(day),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
+  height: 50,
+  child: ListView(
+    scrollDirection: Axis.horizontal,
+    children: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((day) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _selectedDay == day ? Colors.blue : Colors.grey,
+            foregroundColor: Colors.white, // Set text color to white
+          ),
+          onPressed: () {
+            setState(() {
+              if (_selectedDay == day && _showHours) {
+                // Если уже показываем часы этого дня - возвращаем дни недели
+                _showHours = false;
+                _selectedDay = null;
+              } else {
+                // Иначе показываем часы выбранного дня
+                _showHours = true;
+                _selectedDay = day;
+              }
+            });
+          },
+          child: Text(day),
+        ),
+      );
+    }).toList(),
+  ),
+),
 
                 // сам столбчатый график, по дням или неделям  
                 Container(
@@ -1511,8 +1524,8 @@ SliverToBoxAdapter(
                             _selectedOperation = value!;
                           });
                         },
-                        dropdownColor: Colors.grey[900],
-                        style: TextStyle(color: Colors.white),
+                        dropdownColor: Colors.white,
+                        style: TextStyle(color: Colors.black),
                       ),
                     ],
                   ),
@@ -1523,7 +1536,7 @@ SliverToBoxAdapter(
                       title: ChartTitle(
                         text:
                             'Динамика курса $_selectedCurrency ($_selectedOperation)',
-                        textStyle: TextStyle(color: Colors.white),
+                        textStyle: TextStyle(color: Colors.black), // Changed from white
                       ),
                       primaryXAxis: CategoryAxis(
                         title: AxisTitle(text: 'Дата'),
@@ -1544,10 +1557,15 @@ SliverToBoxAdapter(
                           animationDuration: 1000,
                         ),
                       ],
+                      legend: Legend(
+                        isVisible: true,
+                        position: LegendPosition.bottom,
+                        textStyle: TextStyle(color: Colors.black), // Changed from white
+                      ),
                       tooltipBehavior: TooltipBehavior(
                         enable: true,
                         format: 'Дата: point.x\nКурс: point.y',
-                        textStyle: TextStyle(color: Colors.white),
+                        textStyle: TextStyle(color: Colors.black), // Changed from white
                       ),
                     ),
                   ),

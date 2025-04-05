@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:currencies/pages/addCurency.dart';
 import 'package:currencies/pages/settings.dart';
 import 'package:currencies/pages/currency_screen.dart'; // Импорт нового экрана
-
+//то что которая появляется при нажатии на menubar в home.dart
 class CustomDrawer extends StatelessWidget {
   final Color drawerHeaderColor;
 
