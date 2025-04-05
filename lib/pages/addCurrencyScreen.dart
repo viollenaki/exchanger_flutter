@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+void main() {
+  runApp(const MaterialApp(home: AddCurrencyScreen()));
+}
+
 class AddCurrencyScreen extends StatefulWidget {
   const AddCurrencyScreen({super.key});
 
@@ -10,25 +14,22 @@ class AddCurrencyScreen extends StatefulWidget {
 }
 
 class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
-  final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _codeController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
-  List<dynamic> _allCurrencies = [];
-  List<dynamic> _filteredCurrencies = [];
-  dynamic _selectedCurrency;
+  List<dynamic> _userInventory = [];
+  bool _isLoadingBalance = true;
   bool _isLoading = false;
-  bool _isValidCode = false;
-  bool _isFetchingCurrencies = true;
 
   @override
   void initState() {
     super.initState();
-    _fetchCurrencies();
+    _fetchUserInventory();
   }
 
-  Future<void> _fetchCurrencies() async {
+  Future<void> _fetchUserInventory() async {
     try {
-      const url = 'https://dair12.pythonanywhere.com/list_currencies/';
+      const url = 'https://dair12.pythonanywhere.com/get_user_inventory/';
       const userId = 12;
 
       final response = await http.post(
@@ -38,68 +39,24 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
       );
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
+        final data = json.decode(response.body);
         setState(() {
-          _allCurrencies = data;
-          _isFetchingCurrencies = false;
+          _userInventory = data['inventory'];
+          _isLoadingBalance = false;
         });
       }
     } catch (e) {
-      _showSnackBar('Ошибка загрузки валют: $e', Colors.red);
+      print('Ошибка загрузки баланса: $e');
     }
-  }
-
-  void _filterCurrencies(String query) {
-    setState(() {
-      _filteredCurrencies = query.isEmpty
-          ? []
-          : _allCurrencies.where((currency) {
-              final name = currency[1].toString().toLowerCase();
-              final code = currency[2].toString().toLowerCase();
-              return name.contains(query.toLowerCase()) || 
-                     code.contains(query.toLowerCase());
-            }).toList();
-    });
-  }
-
-  void _validateCode(String code) {
-    final cleanCode = code.trim().toUpperCase();
-    final existingCurrency = _allCurrencies.firstWhere(
-      (c) => c[2].toString().toUpperCase() == cleanCode,
-      orElse: () => null,
-    );
-
-    setState(() {
-      _isValidCode = existingCurrency != null;
-      if (_isValidCode) {
-        _searchController.text = existingCurrency[1];
-        _selectedCurrency = existingCurrency;
-      }
-    });
-  }
-
-  void _selectCurrency(dynamic currency) {
-    setState(() {
-      _selectedCurrency = currency;
-      _searchController.text = currency[1];
-      _codeController.text = currency[2];
-      _isValidCode = true;
-      _filteredCurrencies = [];
-    });
   }
 
   Future<void> _sendDataToServer() async {
-    final code = _codeController.text.trim().toUpperCase();
-    final name = _searchController.text.trim();
+    final code = _codeController.text.trim().toLowerCase();
+    final name = _nameController.text.trim();
     final amount = double.tryParse(_amountController.text);
 
-    if (code.isEmpty || amount == null) {
-      _showSnackBar('Заполните код валюты и сумму', Colors.red);
-      return;
-    }
-
-    if (!_isValidCode && name.isEmpty) {
-      _showSnackBar('Введите название для нового кода валюты', Colors.red);
+    if (code.isEmpty || name.isEmpty || amount == null || amount <= 0) {
+      _showSnackBar('Заполните все поля корректно', Colors.red);
       return;
     }
 
@@ -121,11 +78,11 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
       );
 
       final responseData = json.decode(response.body);
-      
+
       if (response.statusCode == 200) {
         _clearFields();
         _showSnackBar('Успешно: ${responseData['message']}', Colors.green);
-        await _fetchCurrencies();
+        await _fetchUserInventory();
       } else {
         _showSnackBar('Ошибка: ${responseData['error']}', Colors.red);
       }
@@ -136,12 +93,64 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
     }
   }
 
+  Future<void> _deleteCurrency(int currencyId) async {
+    try {
+      const url = 'https://dair12.pythonanywhere.com/delete_currency/';
+      const userId = 12;
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'user_id': userId,
+          'currency_id': currencyId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        await _fetchUserInventory();
+      }
+    } catch (e) {
+      print('Ошибка удаления: $e');
+    }
+  }
+
+  Future<void> _updateAmount(int currencyId, double amount) async {
+    try {
+      const url = 'https://dair12.pythonanywhere.com/add_inventory_amount/';
+      const userId = 12;
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'user_id': userId,
+          'currency_id': currencyId,
+          'amount': amount,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        await _fetchUserInventory();
+      }
+    } catch (e) {
+      print('Ошибка изменения суммы: $e');
+    }
+  }
+
+  bool _shouldActivateButton() {
+    final amount = double.tryParse(_amountController.text);
+    return (_codeController.text.length == 3 &&
+        _nameController.text.isNotEmpty &&
+        amount != null &&
+        amount > 0 &&
+        !_isLoading);
+  }
+
   void _clearFields() {
-    _searchController.clear();
+    _nameController.clear();
     _codeController.clear();
     _amountController.clear();
-    _selectedCurrency = null;
-    _isValidCode = false;
   }
 
   void _showSnackBar(String text, Color color) {
@@ -154,111 +163,226 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
     );
   }
 
+  void _showEditDialog(BuildContext context, int currencyId, bool isAdding) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isAdding ? 'Добавить средства' : 'Списать средства'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'Сумма'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () {
+              final amount = double.tryParse(controller.text);
+              if (amount != null && amount > 0) {
+                _updateAmount(currencyId, isAdding ? amount : -amount);
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Подтвердить'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Добавить валюту'),
+        title: const Text('Управление валютами'),
         backgroundColor: Colors.blueAccent,
       ),
-      body: _isFetchingCurrencies
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        labelText: 'Поиск валюты',
-                        border: const OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: _isValidCode
-                            ? const Icon(Icons.check_circle, color: Colors.green)
-                            : null,
-                      ),
-                      onChanged: (value) {
-                        _filterCurrencies(value);
-                        // Убрали сброс _selectedCurrency при изменении текста
-                      },
-                    ),
-
-                    if (_filteredCurrencies.isNotEmpty)
-                      SizedBox(
-                        height: 200,
-                        child: ListView.builder(
-                          itemCount: _filteredCurrencies.length,
-                          itemBuilder: (context, index) {
-                            final currency = _filteredCurrencies[index];
-                            return ListTile(
-                              title: Text(currency[1]),
-                              subtitle: Text(currency[2]),
-                              onTap: () => _selectCurrency(currency),
-                            );
-                          },
-                        ),
-                      ),
-
-                    const SizedBox(height: 20),
-                    TextField(
-                      controller: _codeController,
-                      decoration: InputDecoration(
-                        labelText: 'Код валюты',
-                        border: const OutlineInputBorder(),
-                        errorText: _codeController.text.isNotEmpty && !_isValidCode
-                            ? 'Неизвестный код'
-                            : null,
-                      ),
-                      maxLength: 3,
-                      textCapitalization: TextCapitalization.characters,
-                      onChanged: _validateCode,
-                    ),
-
-                    const SizedBox(height: 20),
-                    TextField(
-                      controller: _amountController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Сумма',
-                        border: OutlineInputBorder(),
-                        suffixText: 'ед.',
-                      ),
-                    ),
-
-                    const SizedBox(height: 30),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: (_codeController.text.isNotEmpty &&
-                                    _amountController.text.isNotEmpty &&
-                                    (_isValidCode || _searchController.text.isNotEmpty) &&
-                                    !_isLoading)
-                            ? _sendDataToServer
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: Colors.blueAccent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text(
-                                'Добавить валюту',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ],
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Форма добавления валюты
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Название валюты',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+  controller: _codeController,
+  decoration: InputDecoration(
+    labelText: 'Код валюты (3 буквы)',
+    border: const OutlineInputBorder(),
+    errorText: _codeController.text.isNotEmpty && 
+              _codeController.text.length != 3
+        ? 'Код должен содержать 3 символа'
+        : null,
+  ),
+  maxLength: 3,
+  textCapitalization: TextCapitalization.characters,
+  onChanged: (value) {
+    final newValue = value.toUpperCase();
+    if (newValue != value) {
+      _codeController.value = _codeController.value.copyWith(
+        text: newValue,
+        selection: TextSelection.collapsed(offset: newValue.length),
+      );
+    }
+  },
+),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _amountController,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Сумма',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 30),
+              SizedBox(
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _shouldActivateButton() ? _sendDataToServer : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('Добавить валюту'),
                 ),
               ),
+              
+              // Заголовок и список валют
+              const Padding(
+                padding: EdgeInsets.only(top: 30, bottom: 15),
+                child: Text(
+                  'Текущие валюты:',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blueAccent,
+                  ),
+                ),
+              ),
+              Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: _isLoadingBalance
+                    ? const Center(child: CircularProgressIndicator())
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: _userInventory.length,
+                        itemBuilder: (context, index) {
+                          final currency = _userInventory[index];
+                          return Dismissible(
+                            key: Key(currency['currency_id'].toString()),
+                            direction: DismissDirection.endToStart,
+                            background: Container(
+                              color: Colors.red,
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 20),
+                              child:
+                                  const Icon(Icons.delete, color: Colors.white),
+                            ),
+                            confirmDismiss: (direction) async {
+  return await showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text(
+        'Удалить валюту?',
+        style: TextStyle( // Увеличенный шрифт
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      content: const Text(
+        'Вы уверены что хотите удалить эту валюту?',
+        style: TextStyle( // Увеличенный шрифт
+          fontSize: 18,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text(
+            'Отмена',
+            style: TextStyle(fontSize: 16), // Стандартный размер
+          ),
+        ),
+        TextButton(
+          onPressed: () {
+            _deleteCurrency(currency['currency_id']);
+            Navigator.pop(context, true);
+          },
+          child: const Text(
+            'Удалить',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.red,
             ),
+          ),
+        ),
+      ],
+    ),
+  );
+},
+                            child: ListTile(
+                              title: Text(
+                                currency['currency'],
+                                style: const TextStyle(
+                                  // Увеличенный шрифт
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              subtitle: Text(
+  '${currency['quantity']} ${currency['currency_code'].toString().toUpperCase()}',
+  style: const TextStyle(
+    fontSize: 16,
+    color: Colors.black87,
+  ),
+),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.remove, size: 28),
+                                    onPressed: () => _showEditDialog(context,
+                                        currency['currency_id'], false),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.add, size: 28),
+                                    onPressed: () => _showEditDialog(
+                                        context, currency['currency_id'], true),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
