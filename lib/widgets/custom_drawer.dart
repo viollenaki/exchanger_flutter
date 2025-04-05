@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:currencies/pages/userProfile.dart';
+import 'package:currencies/pages/addCurency.dart';
 import 'package:currencies/pages/settings.dart';
 import 'package:currencies/pages/currency_screen.dart'; // Импорт нового экрана
 
@@ -32,7 +32,7 @@ class CustomDrawer extends StatelessWidget {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const UserProfile()),
+                MaterialPageRoute(builder: (context) => const AddCurrencyScreen()), // Corrected widget
               );
             },
           ),

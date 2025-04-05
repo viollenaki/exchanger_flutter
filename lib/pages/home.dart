@@ -1,5 +1,5 @@
 import 'package:currencies/pages/settings.dart';
-import 'package:currencies/pages/userProfile.dart';
+import 'package:currencies/pages/addCurency.dart';
 import 'package:flutter/material.dart';
 import 'eventHistory.dart'; // Import the HistoryPage
 import 'package:currencies/widgets/custom_drawer.dart';
