@@ -21,8 +21,7 @@ class MyApp extends StatelessWidget {
   final String? storedPin;
   final bool isUserLoggedIn;
 
-  const MyApp({Key? key, this.storedPin, required this.isUserLoggedIn})
-      : super(key: key);
+  const MyApp({super.key, this.storedPin, required this.isUserLoggedIn});
 
   @override
   Widget build(BuildContext context) {

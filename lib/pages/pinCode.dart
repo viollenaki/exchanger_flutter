@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CreatePinScreen extends StatefulWidget {
+  const CreatePinScreen({super.key});
+
   @override
   _CreatePinScreenState createState() => _CreatePinScreenState();
 }
 
 class _CreatePinScreenState extends State<CreatePinScreen> {
-  List<String> _pin = [];
-  List<String> _confirmPin = [];
+  final List<String> _pin = [];
+  final List<String> _confirmPin = [];
   bool _isConfirming = false;
   String? _buttonPressed;
 
@@ -203,15 +205,14 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
 class VerifyPinScreen extends StatefulWidget {
   final bool isForDisablingPin;
 
-  const VerifyPinScreen({this.isForDisablingPin = false, Key? key})
-      : super(key: key);
+  const VerifyPinScreen({this.isForDisablingPin = false, super.key});
 
   @override
   _VerifyPinScreenState createState() => _VerifyPinScreenState();
 }
 
 class _VerifyPinScreenState extends State<VerifyPinScreen> {
-  List<String> _pin = [];
+  final List<String> _pin = [];
   String? _buttonPressed;
 
   void _addDigit(String digit) {

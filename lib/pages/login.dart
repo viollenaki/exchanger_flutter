@@ -222,7 +222,7 @@ class _LoginState extends State<Login> {
         TextEditingController();
 
     // Функция для регистрации пользователя
-    Future<void> _registerUser() async {
+    Future<void> registerUser() async {
       final String username = usernameController.text;
       final String email = emailController.text;
       final String password = passwordController.text;
@@ -287,7 +287,7 @@ class _LoginState extends State<Login> {
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
-            onPressed: _registerUser, // Вызов функции регистрации
+            onPressed: registerUser, // Вызов функции регистрации
             child:
                 const Text("Register", style: TextStyle(color: Colors.white)),
           ),

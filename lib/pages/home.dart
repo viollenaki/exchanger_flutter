@@ -1,5 +1,5 @@
 import 'package:currencies/pages/settings.dart';
-import 'package:currencies/pages/userProfile.dart';
+import 'package:currencies/pages/addCurrencyScreen.dart';
 import 'package:flutter/material.dart';
 import 'eventHistory.dart'; // Import the HistoryPage
 
@@ -63,7 +63,7 @@ class _HomeState extends State<Home> {
                   // Действие при нажатии на иконку профиля
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const UserProfile()),
+                    MaterialPageRoute(builder: (context) => const AddCurrencyScreen()),
                   );
                 },
                 child: const Icon(
