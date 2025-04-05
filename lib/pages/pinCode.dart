@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CreatePinScreen extends StatefulWidget {
@@ -11,6 +13,32 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
   List<String> _confirmPin = [];
   bool _isConfirming = false;
   String? _buttonPressed;
+
+  Future<void> sendPin(String email, String pin) async {
+    final url = Uri.parse('https://dair12.pythonanywhere.com/send_pin_view/');
+
+    final headers = {
+      'Content-Type': 'application/json',
+    };
+
+    final body = jsonEncode({
+      'email': email,
+      'pin': pin,
+    });
+
+    try {
+      final response = await http.post(url, headers: headers, body: body);
+
+      if (response.statusCode == 200) {
+        print('Email sent successfully!');
+      } else {
+        print('Failed to send email. Code: ${response.statusCode}');
+        print('Response: ${response.body}');
+      }
+    } catch (e) {
+      print('Error sending request: $e');
+    }
+  }
 
   void _addDigit(String digit) {
     setState(() {
