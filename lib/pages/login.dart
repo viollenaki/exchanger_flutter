@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert'; // Для обработки JSON
+import 'package:shared_preferences/shared_preferences.dart'; // For local storage
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -10,8 +11,89 @@ class Login extends StatefulWidget {
 }
 
 class _LoginState extends State<Login> {
-  final PageController _pageController = PageController(); // Контроллер для переключения страниц
+  final PageController _pageController =
+      PageController(); // Контроллер для переключения страниц
   int _tabIndex = 0; // Индекс текущей вкладки (Login или Register)
+
+  @override
+  void initState() {
+    super.initState();
+    _checkSavedCredentials(); // Check for saved credentials on app launch
+  }
+
+  Future<void> _checkSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? savedUsername = prefs.getString('username');
+    final String? savedPassword = prefs.getString('password');
+
+    if (savedUsername != null && savedPassword != null) {
+      _loginUser(savedUsername, savedPassword, autoLogin: true);
+    }
+  }
+
+  Future<void> _loginUser(String username, String password,
+      {bool autoLogin = false}) async {
+    if (!autoLogin) {
+      // Manual login: validate input fields
+      if (username.isEmpty || password.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please fill in all fields')),
+        );
+        return;
+      }
+    }
+
+    final url = Uri.parse("https://dair12.pythonanywhere.com/login_user/");
+    try {
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "identifier": username,
+          "password": password,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+
+        if (responseData.containsKey('message')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(responseData['message'])),
+          );
+
+          // Save user credentials locally
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('username', username);
+          await prefs.setString('password', password);
+
+          // Navigate to home page
+          final int userId = responseData['id'];
+          final String userEmail = responseData['email'];
+          final double userBalance = responseData['balance'];
+
+          Navigator.pushReplacementNamed(context, '/home', arguments: {
+            'id': userId,
+            'email': userEmail,
+            'balance': userBalance,
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid login credentials')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Server error: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      print('Error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to connect to the server: $e')),
+      );
+    }
+  }
 
   // Виджет для отображения вкладок (Login и Register)
   Widget _buildMainTabs() {
@@ -39,7 +121,8 @@ class _LoginState extends State<Login> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          setState(() => _tabIndex = index); // Обновление текущего индекса вкладки
+          setState(
+              () => _tabIndex = index); // Обновление текущего индекса вкладки
           _pageController.animateToPage(
             index,
             duration: const Duration(milliseconds: 400),
@@ -77,7 +160,8 @@ class _LoginState extends State<Login> {
   }
 
   // Виджет для текстового поля ввода
-  Widget _buildTextInput(IconData icon, String hint, {bool obscure = false, TextEditingController? controller}) {
+  Widget _buildTextInput(IconData icon, String hint,
+      {bool obscure = false, TextEditingController? controller}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: TextField(
@@ -102,79 +186,15 @@ class _LoginState extends State<Login> {
     final TextEditingController usernameController = TextEditingController();
     final TextEditingController passwordController = TextEditingController();
 
-    // Функция для входа пользователя
-    Future<void> _loginUser() async {
-      final String username = usernameController.text.trim();
-      final String password = passwordController.text.trim();
-
-      // Проверка на заполнение всех полей
-      if (username.isEmpty || password.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please fill in all fields')),
-        );
-        return;
-      }
-
-      final url = Uri.parse("https://dair12.pythonanywhere.com/login_user/");
-      try {
-        final response = await http.post(
-          url,
-          headers: {"Content-Type": "application/json"},
-          body: jsonEncode({
-            "identifier": username,
-            "password": password,
-          }),
-        );
-
-        // Вывод в консоль статуса и тела ответа
-        print('Status code: ${response.statusCode}');
-        print('Body: ${response.body}');
-
-        if (response.statusCode == 200) {
-          final responseData = jsonDecode(response.body);
-
-          // Проверка успешного входа
-          if (responseData.containsKey('message')) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(responseData['message'])), // Сообщение из API
-            );
-
-            // Сохранение данных пользователя (если нужно)
-            final int userId = responseData['id'];
-            final String userEmail = responseData['email'];
-            final double userBalance = responseData['balance'];
-
-            // Переход на главную страницу
-            Navigator.pushReplacementNamed(context, '/home', arguments: {
-              'id': userId,
-              'email': userEmail,
-              'balance': userBalance,
-            });
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Invalid login credentials')),
-            );
-          }
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Server error: ${response.statusCode}')),
-          );
-        }
-      } catch (e) {
-        // Вывод ошибки в консоль
-        print('Error: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to connect to the server: $e')),
-        );
-      }
-    }
-
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          _buildTextInput(Icons.person, "Username", controller: usernameController), // Поле ввода имени пользователя
-          _buildTextInput(Icons.lock, "Password", obscure: true, controller: passwordController), // Поле ввода пароля
+          _buildTextInput(Icons.person, "Username",
+              controller: usernameController), // Поле ввода имени пользователя
+          _buildTextInput(Icons.lock, "Password",
+              obscure: true,
+              controller: passwordController), // Поле ввода пароля
           const SizedBox(height: 10),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -184,7 +204,8 @@ class _LoginState extends State<Login> {
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
-            onPressed: _loginUser, // Вызов функции входа
+            onPressed: () => _loginUser(usernameController.text.trim(),
+                passwordController.text.trim()), // Вызов функции входа
             child: const Text("Login", style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -197,7 +218,8 @@ class _LoginState extends State<Login> {
     final TextEditingController usernameController = TextEditingController();
     final TextEditingController emailController = TextEditingController();
     final TextEditingController passwordController = TextEditingController();
-    final TextEditingController confirmPasswordController = TextEditingController();
+    final TextEditingController confirmPasswordController =
+        TextEditingController();
 
     // Функция для регистрации пользователя
     Future<void> _registerUser() async {
@@ -208,7 +230,9 @@ class _LoginState extends State<Login> {
 
       if (password != confirmPassword) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Passwords do not match')), // Проверка совпадения паролей
+          const SnackBar(
+              content: Text(
+                  'Passwords do not match')), // Проверка совпадения паролей
         );
         return;
       }
@@ -227,7 +251,9 @@ class _LoginState extends State<Login> {
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Registration successful: ${responseData['message']}')),
+          SnackBar(
+              content:
+                  Text('Registration successful: ${responseData['message']}')),
         );
       } else {
         final responseData = jsonDecode(response.body);
@@ -241,10 +267,17 @@ class _LoginState extends State<Login> {
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          _buildTextInput(Icons.person, "Username", controller: usernameController), // Поле ввода имени пользователя
-          _buildTextInput(Icons.email, "Email", controller: emailController), // Поле ввода email
-          _buildTextInput(Icons.lock, "Password", obscure: true, controller: passwordController), // Поле ввода пароля
-          _buildTextInput(Icons.lock_outline, "Confirm Password", obscure: true, controller: confirmPasswordController), // Поле подтверждения пароля
+          _buildTextInput(Icons.person, "Username",
+              controller: usernameController), // Поле ввода имени пользователя
+          _buildTextInput(Icons.email, "Email",
+              controller: emailController), // Поле ввода email
+          _buildTextInput(Icons.lock, "Password",
+              obscure: true,
+              controller: passwordController), // Поле ввода пароля
+          _buildTextInput(Icons.lock_outline, "Confirm Password",
+              obscure: true,
+              controller:
+                  confirmPasswordController), // Поле подтверждения пароля
           const SizedBox(height: 10),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -255,7 +288,8 @@ class _LoginState extends State<Login> {
               ),
             ),
             onPressed: _registerUser, // Вызов функции регистрации
-            child: const Text("Register", style: TextStyle(color: Colors.white)),
+            child:
+                const Text("Register", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -269,7 +303,8 @@ class _LoginState extends State<Login> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final bool isLandscape = constraints.maxWidth > constraints.maxHeight; // Проверка ориентации экрана
+            final bool isLandscape = constraints.maxWidth >
+                constraints.maxHeight; // Проверка ориентации экрана
 
             return Column(
               children: [
@@ -289,7 +324,8 @@ class _LoginState extends State<Login> {
                     margin: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: const BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(40)), // Скругленные углы
+                      borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(40)), // Скругленные углы
                     ),
                     child: isLandscape
                         ? Row(
@@ -300,7 +336,8 @@ class _LoginState extends State<Login> {
                                   padding: const EdgeInsets.all(24),
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
                                     children: [
                                       const Text(
                                         'Welcome',
