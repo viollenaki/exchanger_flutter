@@ -61,7 +61,7 @@ class _InformationState extends State<Information> {
         _filteredTransactions = _transactions.where((transaction) {
           try {
             DateTime date =
-                DateFormat('yyyy-MM-dd HH-mm').parse(transaction['created_at']);
+                DateFormat('yyyy-MM-dd HH:mm').parse(transaction['created_at']);
             return date.isAfter(dateRange.start.subtract(Duration(days: 1))) &&
                 date.isBefore(dateRange.end.add(Duration(days: 1)));
           } catch (e) {
@@ -144,7 +144,7 @@ class _InformationState extends State<Information> {
 
     for (var transaction in _filteredTransactions) {
       DateTime date =
-          DateFormat('yyyy-MM-dd HH-mm').parse(transaction['created_at']);
+          DateFormat('yyyy-MM-dd HH:mm').parse(transaction['created_at']);
       String day = _getDayOfWeek(date.weekday);
       dayCounts.update(day, (value) => value + 1);
     }
@@ -163,7 +163,7 @@ class _InformationState extends State<Information> {
 
     for (var transaction in _filteredTransactions) {
       DateTime date =
-          DateFormat('yyyy-MM-dd HH-mm').parse(transaction['created_at']);
+          DateFormat('yyyy-MM-dd HH:mm').parse(transaction['created_at']);
       if (_getDayOfWeek(date.weekday) == day) {
         hourCounts.update(date.hour, (value) => value + 1);
       }
