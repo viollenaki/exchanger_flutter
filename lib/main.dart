@@ -1,3 +1,4 @@
+import 'package:currencies/pages/addCurrencyScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:currencies/pages/home.dart';
 import 'package:currencies/pages/login.dart';
@@ -44,6 +45,7 @@ class MyApp extends StatelessWidget {
               '/createPin': (context) => CreatePinScreen(),
               '/verifyPin': (context) => VerifyPinScreen(),
               '/settings': (context) => const Settings(), // Add Settings route
+              '/currencyScreen': (context) => const AddCurrencyScreen(), // Add CurrencyScreen route
             },
           );
         },
