@@ -83,6 +83,7 @@ class _SettingsHeaderScreenState extends State<SettingsHeaderScreen> {
                   child: SafeArea(
                     child: Stack(
                       children: [
+                        // Back button
                         Positioned(
                           left: 16,
                           top: 16,
@@ -90,10 +91,11 @@ class _SettingsHeaderScreenState extends State<SettingsHeaderScreen> {
                             icon: const Icon(Icons.arrow_back,
                                 color: Colors.white),
                             onPressed: () {
-                              Navigator.pop(context);
+                              Navigator.pop(context); // Navigate back to the previous screen
                             },
                           ),
                         ),
+                        // Title
                         Align(
                           alignment: Alignment.topCenter,
                           child: Padding(

@@ -1,6 +1,27 @@
 import 'package:flutter/material.dart';
 import 'currencies.dart'; // Импортируем список валют
 
+// Волнистая форма заголовка
+class WaveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    path.lineTo(0, size.height - 10);
+    path.quadraticBezierTo(
+      size.width / 2,
+      size.height,
+      size.width,
+      size.height - 35,
+    );
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
 class UserProfile extends StatefulWidget {
   const UserProfile({super.key});
 
@@ -34,90 +55,115 @@ class _UserProfileState extends State<UserProfile> {
       _filteredCurrencies = []; // Очищаем список после выбора
     });
   }
-
+                          
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Профиль'),
-        backgroundColor: Colors.blueAccent,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Добавить валюту',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _searchController,
-              decoration: const InputDecoration(
-                hintText: 'Введите название валюты',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: _filterCurrencies,
-            ),
-            const SizedBox(height: 10),
-            if (_selectedCurrency != null)
-              TextField(
-                controller: _amountController,
-                keyboardType: TextInputType.number, // Поле для числового ввода
-                decoration: InputDecoration(
-                  hintText: 'Введите сумму в ${_selectedCurrency!["name"]}',
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: _filteredCurrencies.isNotEmpty
-                  ? ListView.builder(
-                      itemCount: _filteredCurrencies.length,
-                      itemBuilder: (context, index) {
-                        final currency = _filteredCurrencies[index];
-                        return ListTile(
-                          title: Text(currency["name"]!),
-                          onTap: () => _selectCurrency(currency),
-                        );
+      body: Column(
+        children: [
+          ClipPath(
+            clipper: WaveClipper(),
+            child: Container(
+              height: 150,
+              color: Colors.blueAccent,
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: 16,
+                    top: 50,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () {
+                        Navigator.pop(context); // Возвращаемся на предыдущий экран
                       },
-                    )
-                  : const SizedBox.shrink(), // Скрываем список, если он пуст
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: _selectedCurrency != null && _amountController.text.isNotEmpty
-                  ? () {
-                      // Логика добавления выбранной валюты и суммы
-                      print(
-                          'Добавлена валюта: ${_selectedCurrency!["name"]}, сумма: ${_amountController.text}');
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                              'Добавлена валюта: ${_selectedCurrency!["name"]}, сумма: ${_amountController.text}'),
-                        ),
-                      );
-                      setState(() {
-                        _selectedCurrency = null; // Сбрасываем выбранную валюту
-                        _searchController.clear(); // Очищаем поле ввода
-                        _amountController.clear(); // Очищаем сумму
-                      });
-                    }
-                  : null, // Кнопка неактивна, если валюта или сумма не выбраны
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueAccent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Добавить валюту',
-                style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  // Removed the Center widget with the Icon
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Добавить валюту',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _searchController,
+                    decoration: const InputDecoration(
+                      hintText: 'Введите название валюты',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: _filterCurrencies,
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _amountController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: _selectedCurrency != null
+                          ? 'Введите сумму в ${_selectedCurrency!["name"]}'
+                          : 'Введите сумму',
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ElevatedButton(
+                    onPressed: _selectedCurrency != null &&
+                            _amountController.text.isNotEmpty
+                        ? () {
+                            print(
+                                'Добавлена валюта: ${_selectedCurrency!["name"]}, сумма: ${_amountController.text}');
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'Добавлена валюта: ${_selectedCurrency!["name"]}, сумма: ${_amountController.text}'),
+                              ),
+                            );
+                            setState(() {
+                              _selectedCurrency = null;
+                              _searchController.clear();
+                              _amountController.clear();
+                            });
+                          }
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Добавить валюту',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: _filteredCurrencies.isNotEmpty
+                        ? ListView.builder(
+                            itemCount: _filteredCurrencies.length,
+                            itemBuilder: (context, index) {
+                              final currency = _filteredCurrencies[index];
+                              return ListTile(
+                                title: Text(currency["name"]!),
+                                onTap: () => _selectCurrency(currency),
+                              );
+                            },
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
