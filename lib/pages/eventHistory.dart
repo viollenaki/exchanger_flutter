@@ -332,6 +332,9 @@ class _EventState extends State<Event> {
         ? Icons.arrow_upward
         : Icons.arrow_downward;
 
+    // Determine if the device is a tablet (width > 600)
+    bool isTablet = MediaQuery.of(context).size.width > 600;
+
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 10),
@@ -346,97 +349,148 @@ class _EventState extends State<Event> {
           )
         ],
       ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(operationIcon, color: statusColor, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    operationText,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: statusColor,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                transaction.createdAt.split(' ')[0],
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${transaction.currency}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  Text(
-                    'Quantity: ${transaction.quantity.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      color: Colors.grey[700],
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'Rate: ${transaction.rate.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  Text(
-                    'Total: ${(transaction.quantity * transaction.rate).toStringAsFixed(2)} KGS',
-                    style: TextStyle(
-                      color: Colors.grey[700],
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          if (transaction.description != null &&
-              transaction.description!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                transaction.description!,
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                  fontStyle: FontStyle.italic,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+      padding: const EdgeInsets.all(12),
+      child: isTablet
+          ? Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // 1. Operation icon and text
+                _buildOperationWidget(
+                    operationText, operationIcon, statusColor),
+                // 2. Currency
+                _buildCurrencyWidget(transaction.currency),
+                // 3. Quantity
+                _buildQuantityWidget(transaction.quantity),
+                // 4. Rate and Total
+                _buildRateAndTotalWidget(
+                    transaction.rate, transaction.quantity),
+                // 5. Date
+                _buildDateWidget(transaction.createdAt),
+              ],
+            )
+          : Wrap(
+              spacing: 8, // Space between items
+              runSpacing: 8, // Space between rows when wrapping
+              children: [
+                // 1. Operation icon and text
+                _buildOperationWidget(
+                    operationText, operationIcon, statusColor),
+                // 2. Currency
+                _buildCurrencyWidget(transaction.currency),
+                // 3. Quantity
+                _buildQuantityWidget(transaction.quantity),
+                // 4. Rate and Total
+                _buildRateAndTotalWidget(
+                    transaction.rate, transaction.quantity),
+                // 5. Date
+                _buildDateWidget(transaction.createdAt),
+              ],
             ),
+    );
+  }
+
+  Widget _buildOperationWidget(
+      String operationText, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 4),
+          Text(
+            operationText,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: color,
+              fontSize: 14,
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCurrencyWidget(String currency) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.blue.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        currency,
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+          color: Colors.blue,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuantityWidget(double quantity) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+          'Количество',
+          style: TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+        Text(
+          quantity.toStringAsFixed(2),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRateAndTotalWidget(double rate, double quantity) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+          'Курс и сумма',
+          style: TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+        Text(
+          '${rate.toStringAsFixed(2)} = ${(quantity * rate).toStringAsFixed(2)} KGS',
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDateWidget(String createdAt) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+          'Дата',
+          style: TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+        Text(
+          createdAt.split(' ')[0],
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[700],
+          ),
+        ),
+      ],
     );
   }
 
