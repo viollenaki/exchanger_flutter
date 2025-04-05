@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart'; // Add this import
 import '../globals.dart'; // Import globals.dart
 
 void main() {
@@ -21,21 +22,31 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
   List<dynamic> _userInventory = [];
   bool _isLoadingBalance = true;
   bool _isLoading = false;
+  String? _userId; // Add user ID variable
 
   @override
   void initState() {
     super.initState();
+    _getUserIdAndFetchInventory();
+  }
+
+  Future<void> _getUserIdAndFetchInventory() async {
+    final prefs = await SharedPreferences.getInstance();
+    _userId = prefs.getString('user_id');
     _fetchUserInventory();
   }
 
   Future<void> _fetchUserInventory() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('user_id') ?? '0';
       const url = 'https://dair12.pythonanywhere.com/get_user_inventory/';
 
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'user_id': user_id}), // Use global user_id
+        body: json
+            .encode({'user_id': userId}), // Use user_id from SharedPreferences
       );
 
       if (response.statusCode == 200) {
@@ -64,12 +75,14 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
 
     try {
       const url = 'https://dair12.pythonanywhere.com/add_currency/';
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('user_id') ?? '0';
 
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
-          'user_id': user_id, // Use global user_id
+          'user_id': userId, // Use user_id from SharedPreferences
           'name': name,
           'code': code,
           'amount': amount,
@@ -95,12 +108,14 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
   Future<void> _deleteCurrency(int currencyId) async {
     try {
       const url = 'https://dair12.pythonanywhere.com/delete_currency/';
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('user_id') ?? '0';
 
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
-          'user_id': user_id, // Use global user_id
+          'user_id': userId, // Use user_id from SharedPreferences
           'currency_id': currencyId,
         }),
       );
@@ -116,12 +131,14 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
   Future<void> _updateAmount(int currencyId, double amount) async {
     try {
       const url = 'https://dair12.pythonanywhere.com/add_inventory_amount/';
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('user_id') ?? '0';
 
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
-          'user_id': user_id, // Use global user_id
+          'user_id': userId, // Use user_id from SharedPreferences
           'currency_id': currencyId,
           'amount': amount,
         }),

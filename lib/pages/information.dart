@@ -7,7 +7,9 @@ import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:open_file/open_file.dart'; // Для открытия файла
 import 'package:share_plus/share_plus.dart'; // Для возможности поделиться файлом
 import 'dart:io';
-import 'package:path_provider/path_provider.dart';import 'dart:ui' as ui;
+import 'package:path_provider/path_provider.dart';
+import 'dart:ui' as ui;
+import '../globals.dart' as globals; // Import globals
 
 // Add this function to capture charts
 Future<ui.Image?> captureChartAsImage(GlobalKey chartKey) async {
@@ -462,8 +464,65 @@ class _InformationState extends State<Information> {
   @override
   void initState() {
     super.initState();
-    _filteredTransactions =
-        _transactions; // Изначально показываем все транзакции
+    // Use global transactions if available, otherwise use sample data
+    _transactions = globals.transactions ??
+        [
+          {
+            'id': 1,
+            'operation': 'sell',
+            'currency': 'CNY',
+            'quantity': 758.3,
+            'rate': 531.03,
+            'description': 'Transaction 1',
+            'created_at': '2025-03-18 11:55'
+          },
+          {
+            'id': 2,
+            'operation': 'sell',
+            'currency': 'EUR',
+            'quantity': 554.48,
+            'rate': 438.82,
+            'description': 'Transaction 2',
+            'created_at': '2025-03-13 22:30'
+          },
+          {
+            'id': 3,
+            'operation': 'buy',
+            'currency': 'EUR',
+            'quantity': 361.06,
+            'rate': 326.28,
+            'description': 'Transaction 3',
+            'created_at': '2025-03-07 15:08'
+          },
+          {
+            'id': 4,
+            'operation': 'buy',
+            'currency': 'USD',
+            'quantity': 842.35,
+            'rate': 226.09,
+            'description': 'Transaction 4',
+            'created_at': '2025-03-14 06:27'
+          },
+          {
+            'id': 5,
+            'operation': 'buy',
+            'currency': 'EUR',
+            'quantity': 851.42,
+            'rate': 539.99,
+            'description': 'Transaction 5',
+            'created_at': '2025-03-31 08:04'
+          },
+          {
+            'id': 100,
+            'operation': 'sell',
+            'currency': 'USD',
+            'quantity': 979.07,
+            'rate': 80.38,
+            'description': 'Transaction 100',
+            'created_at': '2025-03-18 07:35'
+          }
+        ];
+    _filteredTransactions = _transactions; // Initialize filtered transactions
   }
 
 // Метод для фильтрации транзакций по дате
@@ -653,62 +712,7 @@ class _InformationState extends State<Information> {
   }
 
   ////////////////////////////////////////////////////////////////////// список существующих транзакций
-  List<Map<String, dynamic>> _transactions = [
-    {
-      'id': 1,
-      'operation': 'sell',
-      'currency': 'CNY',
-      'quantity': 758.3,
-      'rate': 531.03,
-      'description': 'Transaction 1',
-      'created_at': '2025-03-18 11:55'
-    },
-    {
-      'id': 2,
-      'operation': 'sell',
-      'currency': 'EUR',
-      'quantity': 554.48,
-      'rate': 438.82,
-      'description': 'Transaction 2',
-      'created_at': '2025-03-13 22:30'
-    },
-    {
-      'id': 3,
-      'operation': 'buy',
-      'currency': 'EUR',
-      'quantity': 361.06,
-      'rate': 326.28,
-      'description': 'Transaction 3',
-      'created_at': '2025-03-07 15:08'
-    },
-    {
-      'id': 4,
-      'operation': 'buy',
-      'currency': 'USD',
-      'quantity': 842.35,
-      'rate': 226.09,
-      'description': 'Transaction 4',
-      'created_at': '2025-03-14 06:27'
-    },
-    {
-      'id': 5,
-      'operation': 'buy',
-      'currency': 'EUR',
-      'quantity': 851.42,
-      'rate': 539.99,
-      'description': 'Transaction 5',
-      'created_at': '2025-03-31 08:04'
-    },
-    {
-      'id': 100,
-      'operation': 'sell',
-      'currency': 'USD',
-      'quantity': 979.07,
-      'rate': 80.38,
-      'description': 'Transaction 100',
-      'created_at': '2025-03-18 07:35'
-    }
-  ];
+  List<Map<String, dynamic>> _transactions = [];
 
   // 🔹 Метод для заголовков секций
   Widget _buildSectionTitle(String title) {

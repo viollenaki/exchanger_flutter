@@ -179,6 +179,8 @@ class _LoginState extends State<Login> {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('username', username);
           await prefs.setString('password', password);
+          await prefs.setString('user_id', responseData['id'].toString());
+          await prefs.setString('email', responseData['email']);
 
           Navigator.pushReplacementNamed(context, '/home', arguments: {
             'id': responseData['id'],
