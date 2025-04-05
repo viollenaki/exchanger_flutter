@@ -27,8 +27,8 @@ class CustomDrawer extends StatelessWidget {
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.account_circle),
-            title: const Text('Профиль'),
+            leading: const Icon(Icons.attach_money),
+            title: const Text('Добавление валюты'),
             onTap: () {
               Navigator.push(
                 context,
@@ -37,7 +37,7 @@ class CustomDrawer extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.settings),
+            leading: const Icon(Icons.bar_chart),
             title: const Text('Курсы валют'),
             onTap: () {
               Navigator.push(

@@ -28,7 +28,6 @@ class _HomeState extends State<Home> {
 
   bool isBuySelected = true;
   String? selectedCurrency;
-  String balance = '10,000 KGS'; // Add this to your state
 
   // Warm style palette
   final Color warmBlue = const Color(0xFF4B607F);
@@ -121,44 +120,6 @@ class _HomeState extends State<Home> {
               child: Image.asset(
                 'assets/background.jpg', // Ensure the path to the image is correct
                 fit: BoxFit.cover, // Ensures the image covers the entire area
-              ),
-            ),
-            // Display balance
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color.fromARGB(255, 104, 97, 97).withOpacity(0.2), // Легкая тень
-                    spreadRadius: 2,
-                    blurRadius: 5,
-                    offset: const Offset(0, 3), // Смещение тени
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Ваш баланс:',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black54,
-                    ),
-                  ),
-                  Text(
-                    balance, // Динамическое значение баланса
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ],
               ),
             ),
             // Bottom part with the content
